@@ -11,7 +11,7 @@ metadata:
 spec:
   role: Shipping
   replicas: 1
-  image: ghcr.io/oracle/coherence-helidon-sockshop-shipping:latest
+  image: 10.10.10.240/library/ss-shipping:2.3.3
   readinessProbe:
     initialDelaySeconds: 10
     periodSeconds: 10

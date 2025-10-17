@@ -21,7 +21,7 @@
     <groupId>com.oracle.coherence.examples.sockshop.helidon</groupId>
     <artifactId>payment</artifactId>
     <packaging>jar</packaging>
-    <version>2.3.2-SNAPSHOT</version>
+    <version>2.3.3</version>
 
     <properties>
         <mainClass>com.oracle.coherence.examples.sockshop.helidon.payment.Application</mainClass>
@@ -301,10 +301,14 @@
                                 <image>gcr.io/distroless/java21-debian12</image>
                             </from>
                             <to>
-                                <image>${container.repo}-${project.artifactId}</image>
+                                <image>${docker.registry.url}/${docker.registry.name}/ss-${project.artifactId}</image>
                                 <tags>
                                     <tag>${container.version}</tag>
                                 </tags>
+                                <auth>
+                                    <username>${docker.registry.username}</username>
+                                    <password>${docker.registry.password}</password>
+                                </auth>
                             </to>
                             <container>
                                 <!-- good defaults intended for containers -->

@@ -11,7 +11,7 @@ metadata:
 spec:
   role: Catalog
   replicas: 1
-  image: ghcr.io/oracle/coherence-helidon-sockshop-catalog:latest
+  image: 10.10.10.240/library/ss-catalog:2.3.3
   readinessProbe:
     initialDelaySeconds: 10
     periodSeconds: 10

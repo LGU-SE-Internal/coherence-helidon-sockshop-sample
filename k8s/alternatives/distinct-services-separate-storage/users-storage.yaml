@@ -11,7 +11,7 @@ metadata:
 spec:
   role: UsersStorage
   replicas: 1
-  image: ghcr.io/oracle/coherence-helidon-sockshop-users:latest
+  image: 10.10.10.240/library/ss-users:2.3.3
   readinessProbe:
     initialDelaySeconds: 10
     periodSeconds: 10

@@ -19,7 +19,7 @@ coherence:
     ratio: -1
 otel:
   sdk:
-    disabled: true
+    disabled: false
   service:
     name: Payment
   traces:
@@ -27,4 +27,4 @@ otel:
   exporter:
     otlp:
       traces:
-        endpoint: http://jaeger-inmemory-instance-collector:4317
+        endpoint: http://opentelemetry-kube-stack-deployment-collector.monitoring:4317
