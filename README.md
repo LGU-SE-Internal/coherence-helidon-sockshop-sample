@@ -28,6 +28,7 @@ as the application framework, in case one of those is your framework of choice.
 * [Pre-Requisites](#pre-requisites)
 * [How to Run](#how-to-run)
 * [Complete Application Deployment](./doc/complete-application-deployment.md)
+* [Load Testing](#load-testing)
 * [Alternate Coherence Topologies](./k8s/alternatives/topologies.md)
 * [Integrating with Oracle OCI Application Performance Monitoring (APM)](./doc/oracle-cloud-apm.md)
 * [Development](./doc/development.md)
@@ -176,6 +177,21 @@ in the cloud, by following the same set of steps described above (except for por
 which is not necessary), and performing a few additional steps.
 
  [Go to Complete Application Deployment section](./doc/complete-application-deployment.md)
+
+## Load Testing
+
+A comprehensive load generator is available to test the application under realistic conditions.
+The load generator simulates actual e-commerce user behavior with configurable load patterns.
+
+Features:
+- Realistic user scenarios (browsing, cart operations, order placement)
+- Multiple predefined load scenarios (light, medium, heavy, spike)
+- Configuration-driven with YAML files
+- Web UI for interactive testing
+- Docker and Kubernetes deployment support
+- Detailed metrics and reporting
+
+ [Go to Load Generator Documentation](./loadgen/README.md) | [Quick Start Guide](./loadgen/QUICKSTART.md)
 
 ## Development
 
