@@ -1,0 +1,130 @@
+# Load Generator Configuration for Coherence Helidon Sock Shop
+#
+# This file allows you to customize load patterns and API call distributions
+# without modifying the Python code.
+
+# Load test scenarios
+scenarios:
+  # Light load - simulate typical off-peak traffic
+  light:
+    users: 10
+    spawn_rate: 2
+    run_time: "5m"
+    description: "Light load scenario for basic testing and validation"
+    
+  # Medium load - simulate normal business hours
+  medium:
+    users: 50
+    spawn_rate: 5
+    run_time: "15m"
+    description: "Medium load scenario for typical production traffic"
+    
+  # Heavy load - simulate peak shopping periods (Black Friday, holidays)
+  heavy:
+    users: 200
+    spawn_rate: 10
+    run_time: "30m"
+    description: "Heavy load scenario for stress testing"
+    
+  # Spike test - sudden traffic surge
+  spike:
+    users: 500
+    spawn_rate: 50
+    run_time: "10m"
+    description: "Spike test to verify system resilience under sudden load"
+
+# API endpoint weights (must sum to 100)
+# These weights reflect realistic e-commerce user behavior
+api_weights:
+  browse_catalogue: 40      # Users mostly browse products
+  view_product_details: 30  # View specific product information
+  user_login_flow: 10       # Registration and authentication
+  shopping_cart: 15         # Add/remove/update cart items
+  place_order: 5            # Actual purchase conversions
+
+# User behavior configuration
+user_behavior:
+  min_wait: 1.0    # Minimum wait time between actions (seconds)
+  max_wait: 3.0    # Maximum wait time between actions (seconds)
+  
+  # Probabilities for various user actions (0.0 to 1.0)
+  probabilities:
+    view_image: 0.5           # Chance of viewing product image
+    register_on_login_fail: 0.3  # Chance of registering after failed login
+    add_to_cart: 0.7          # Chance of adding item to cart during cart operations
+    modify_cart_item: 0.2     # Chance of updating or deleting cart item
+    delete_vs_update: 0.5     # When modifying, chance of delete vs update
+
+# Target services configuration
+services:
+  # Base URL will be provided via command line or environment variable
+  # Individual service paths (for direct service testing if needed)
+  catalogue: "/catalogue"
+  carts: "/carts"
+  orders: "/orders"
+  users: "/customers"
+  payment: "/paymentAuth"
+  shipping: "/shipping"
+
+# Monitoring and reporting
+monitoring:
+  # Enable CSV stats output
+  csv_stats: true
+  csv_prefix: "loadtest_stats"
+  
+  # Print stats to console
+  print_stats: true
+  print_interval: 10  # seconds
+  
+  # Custom percentiles for response time reporting
+  percentiles: [0.50, 0.75, 0.90, 0.95, 0.99]
+
+# Advanced configuration
+advanced:
+  # Stop on failure threshold
+  stop_on_failure_rate: 0.5  # Stop if failure rate exceeds 50%
+  
+  # Request timeout (seconds)
+  request_timeout: 30
+  
+  # Connection pool size per user
+  connection_pool_size: 10
+  
+  # Enable/disable SSL verification
+  verify_ssl: true
+
+# Test data configuration
+test_data:
+  # Product catalogue size assumptions
+  catalogue_pages: 3
+  products_per_page: [3, 12]  # min, max
+  
+  # User pool size (for generating test users)
+  user_pool_size: 10000
+  
+  # Product tags to use in searches
+  product_tags:
+    - ""
+    - "blue"
+    - "green"
+    - "formal"
+    - "sport"
+    - "geek"
+  
+  # Shopping cart settings
+  cart:
+    min_quantity: 1
+    max_quantity: 3
+    update_max_quantity: 5
+  
+  # Order settings
+  default_address:
+    street: "123 Main St"
+    city: "Springfield"
+    postcode: "12345"
+    country: "USA"
+  
+  default_card:
+    longNum: "1234567890123456"
+    expires: "12/25"
+    ccv: "123"

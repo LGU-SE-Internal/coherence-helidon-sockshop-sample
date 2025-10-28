@@ -1,0 +1,28 @@
+# Conversion-Optimized Scenario
+# Simulates high-intent users with better conversion rates
+# Use case: Testing order processing and payment systems under load
+
+scenarios:
+  high_conversion:
+    users: 50
+    spawn_rate: 5
+    run_time: "20m"
+    description: "Higher conversion rate scenario"
+
+# Adjusted weights - more purchasing behavior
+api_weights:
+  browse_catalogue: 25      # Reduced browsing
+  view_product_details: 25  # Focused product views
+  user_login_flow: 15       # More logins (returning customers)
+  shopping_cart: 20         # More cart activity
+  place_order: 15           # Higher conversion rate
+
+user_behavior:
+  min_wait: 2.0
+  max_wait: 5.0
+  probabilities:
+    view_image: 0.4
+    register_on_login_fail: 0.5  # More registrations
+    add_to_cart: 0.9             # High cart addition rate
+    modify_cart_item: 0.3
+    delete_vs_update: 0.3        # More updates than deletes

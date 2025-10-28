@@ -1,0 +1,28 @@
+# Black Friday / Peak Shopping Scenario
+# Simulates extreme load during major shopping events
+# Use case: Capacity planning and stress testing
+
+scenarios:
+  black_friday:
+    users: 1000
+    spawn_rate: 50
+    run_time: "1h"
+    description: "Extreme load for peak shopping events"
+
+# Balanced weights for high volume
+api_weights:
+  browse_catalogue: 35
+  view_product_details: 30
+  user_login_flow: 10
+  shopping_cart: 18
+  place_order: 7            # Slightly higher conversion during sales
+
+user_behavior:
+  min_wait: 0.5              # Faster user interactions during sales
+  max_wait: 2.0
+  probabilities:
+    view_image: 0.6
+    register_on_login_fail: 0.4
+    add_to_cart: 0.8
+    modify_cart_item: 0.25
+    delete_vs_update: 0.5

@@ -1,0 +1,28 @@
+# Browsing-Heavy Scenario
+# Simulates users who mostly browse without purchasing
+# Use case: Marketing campaign driving traffic but low conversion
+
+scenarios:
+  browsing_heavy:
+    users: 100
+    spawn_rate: 10
+    run_time: "15m"
+    description: "Heavy browsing with minimal conversions"
+
+# Adjusted weights - more browsing, less purchasing
+api_weights:
+  browse_catalogue: 50      # Increased browsing
+  view_product_details: 35  # Increased product views
+  user_login_flow: 5        # Reduced login attempts
+  shopping_cart: 8          # Reduced cart operations
+  place_order: 2            # Minimal conversions
+
+user_behavior:
+  min_wait: 0.5
+  max_wait: 2.0
+  probabilities:
+    view_image: 0.7           # Higher image viewing
+    register_on_login_fail: 0.1
+    add_to_cart: 0.3          # Lower cart additions
+    modify_cart_item: 0.1
+    delete_vs_update: 0.5
