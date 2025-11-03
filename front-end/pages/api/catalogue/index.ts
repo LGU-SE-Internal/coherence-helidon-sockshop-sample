@@ -14,8 +14,7 @@ export default async function handler(
       method: req.method,
       headers: {
         'Content-Type': 'application/json',
-        ...req.headers,
-      },
+      } as HeadersInit,
     });
     
     const data = await response.text();

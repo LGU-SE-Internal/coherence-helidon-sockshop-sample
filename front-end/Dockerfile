@@ -1,19 +1,52 @@
-FROM node:10-alpine
-ENV NODE_ENV "production"
-ENV PORT 8079
-EXPOSE 8079
-RUN addgroup mygroup && adduser -D -G mygroup myuser && mkdir -p /usr/src/app && chown -R myuser /usr/src/app
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
 
-# Prepare app directory
-WORKDIR /usr/src/app
-COPY package.json /usr/src/app/
-COPY yarn.lock /usr/src/app/
-RUN chown myuser /usr/src/app/yarn.lock
+FROM docker.io/library/node:22-slim AS builder
 
-USER myuser
-RUN yarn install
+WORKDIR /app
 
-COPY . /usr/src/app
+COPY package.json package.json
+COPY package-lock.json* package-lock.json*
+COPY yarn.lock* yarn.lock*
 
-# Start the app
-CMD ["/usr/local/bin/npm", "start"]
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
+
+COPY components/ components/
+COPY gateways/ gateways/
+COPY pages/ pages/
+COPY providers/ providers/
+COPY styles/ styles/
+COPY utils/ utils/
+COPY public/ public/
+COPY next.config.js next.config.js
+COPY tsconfig.json tsconfig.json
+
+RUN npm run build
+
+# -----------------------------------------------------------------------------
+
+FROM docker.io/library/node:22-slim AS deps
+
+WORKDIR /app
+
+COPY package.json package.json
+COPY package-lock.json* package-lock.json*
+COPY yarn.lock* yarn.lock*
+
+RUN if [ -f package-lock.json ]; then npm ci --omit=dev; else npm install --production; fi
+
+# -----------------------------------------------------------------------------
+
+FROM gcr.io/distroless/nodejs22-debian12:nonroot
+
+WORKDIR /app
+
+COPY --from=builder /app/.next/standalone/ ./
+COPY --from=builder /app/.next/static/ .next/static/
+COPY --from=deps /app/node_modules/ node_modules/
+COPY --from=builder /app/public/ public/
+COPY ./Instrumentation.js Instrumentation.js
+
+EXPOSE 8080
+
+CMD ["--require=./Instrumentation.js", "server.js"]
