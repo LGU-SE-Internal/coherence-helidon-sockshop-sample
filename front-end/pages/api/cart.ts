@@ -19,7 +19,7 @@ export default async function handler(
       method: req.method,
       headers: {
         'Content-Type': 'application/json',
-      },
+      } as HeadersInit,
       body: req.method !== 'GET' ? JSON.stringify(req.body) : undefined,
     });
     

@@ -6,8 +6,6 @@ import { ReadableSpan, Span, SpanProcessor } from "@opentelemetry/sdk-trace-web"
 import SessionGateway from "../../gateways/Session.gateway";
 import { AttributeNames } from "../enums/AttributeNames";
 
-const { userId } = SessionGateway.getSession();
-
 export class SessionIdProcessor implements SpanProcessor {
     forceFlush(): Promise<void> {
         return Promise.resolve();
@@ -15,6 +13,8 @@ export class SessionIdProcessor implements SpanProcessor {
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     onStart(span: Span, parentContext: Context): void {
+        // Get current session userId for each span to handle session changes
+        const { userId } = SessionGateway.getSession();
         span.setAttribute(AttributeNames.SESSION_ID, userId);
     }
 
