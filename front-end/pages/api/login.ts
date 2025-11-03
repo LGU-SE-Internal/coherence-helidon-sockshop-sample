@@ -8,26 +8,53 @@ export default async function handler(
 ) {
   const endpoints = getBackendEndpoints();
   
+  // Original Express app used GET for login
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+  
   try {
-    const response = await fetch(endpoints.loginUrl, {
-      method: 'POST',
+    // Step 1: Authenticate with user service
+    const authResponse = await fetch(endpoints.loginUrl, {
+      method: 'GET',
       headers: {
-        'Content-Type': 'application/json',
         'Authorization': req.headers.authorization || '',
       } as HeadersInit,
-      body: JSON.stringify(req.body),
     });
     
-    const contentType = response.headers.get('content-type');
-    if (contentType?.includes('application/json')) {
-      const data = await response.json();
-      res.status(response.status).json(data);
-    } else {
-      const data = await response.text();
-      res.status(response.status).send(data);
+    if (authResponse.status !== 200) {
+      return res.status(401).end();
     }
+    
+    const authData = await authResponse.json();
+    const customerId = authData.user?.id;
+    
+    if (!customerId) {
+      return res.status(401).end();
+    }
+    
+    // Step 2: Merge carts (sessionId from cookie, customerId from auth)
+    const sessionId = req.cookies['connect.sid'] || req.cookies['session'] || 'anonymous';
+    
+    try {
+      await fetch(`${endpoints.cartsUrl}/${customerId}/merge?sessionId=${sessionId}`, {
+        method: 'GET',
+      });
+      console.log('Carts merged for customer:', customerId);
+    } catch (error) {
+      // Log but don't fail login if cart merge fails
+      console.error('Cart merge error:', error);
+    }
+    
+    // Step 3: Set cookie and return success
+    res.setHeader('Set-Cookie', [
+      `logged_in=${customerId}; Path=/; HttpOnly; Max-Age=3600`,
+      `customerId=${customerId}; Path=/; Max-Age=3600`,
+    ]);
+    
+    res.status(200).send('Cookie is set');
   } catch (error) {
     console.error('Login API error:', error);
-    res.status(500).json({ error: 'Failed to authenticate with user service' });
+    res.status(401).end();
   }
 }
