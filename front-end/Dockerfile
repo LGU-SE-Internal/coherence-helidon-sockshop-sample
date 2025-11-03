@@ -47,6 +47,10 @@ COPY --from=builder /app/.next/static/ .next/static/
 COPY --from=deps /app/node_modules/ node_modules/
 COPY --from=builder /app/public/ public/
 COPY --from=builder /app/Instrumentation.js Instrumentation.js
+COPY --from=builder /app/utils/ utils/
+COPY --from=builder /app/gateways/ gateways/
+COPY --from=builder /app/providers/ providers/
+COPY --from=builder /app/types/ types/
 
 EXPOSE 8080
 
