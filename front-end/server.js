@@ -1,58 +1,33 @@
-var request      = require("request")
-  , express      = require("express")
-  , morgan       = require("morgan")
-  , path         = require("path")
-  , bodyParser   = require("body-parser")
-  , async        = require("async")
-  , cookieParser = require("cookie-parser")
-  , session      = require("express-session")
-  , config       = require("./config")
-  , helpers      = require("./helpers")
-  , cart         = require("./api/cart")
-  , catalogue    = require("./api/catalogue")
-  , orders       = require("./api/orders")
-  , user         = require("./api/user")
-  , metrics      = require("./api/metrics")
-  , app          = express()
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
 
+const {createServer} = require('http');
+const {parse} = require('url');
+const next = require('next');
 
-app.use(helpers.rewriteSlash);
-app.use(metrics);
-app.use(express.static("public"));
-if(process.env.SESSION_REDIS) {
-    console.log('Using the redis based session manager');
-    app.use(session(config.session_redis));
-}
-else {
-    console.log('Using local session manager');
-    app.use(session(config.session));
-}
+const dev = process.env.NODE_ENV !== 'production';
+const hostname = process.env.NEXT_PUBLIC_PLATFORM === 'local' ? 'localhost' : '0.0.0.0';
+const port = parseInt(process.env.PORT || '8080', 10);
 
-app.use(bodyParser.json());
-app.use(cookieParser());
-app.use(helpers.sessionMiddleware);
-app.use(morgan("dev", {}));
+const app = next({dev, hostname, port});
+const handle = app.getRequestHandler();
 
-var domain = "";
-process.argv.forEach(function (val, index, array) {
-  var arg = val.split("=");
-  if (arg.length > 1) {
-    if (arg[0] == "--domain") {
-      domain = arg[1];
-      console.log("Setting domain to:", domain);
+app.prepare().then(() => {
+  createServer(async (req, res) => {
+    try {
+      const parsedUrl = parse(req.url, true);
+      await handle(req, res, parsedUrl);
+    } catch (err) {
+      console.error('Error occurred handling', req.url, err);
+      res.statusCode = 500;
+      res.end('internal server error');
     }
-  }
-});
-
-/* Mount API endpoints */
-app.use(cart);
-app.use(catalogue);
-app.use(orders);
-app.use(user);
-
-app.use(helpers.errorHandler);
-
-var server = app.listen(process.env.PORT || 8079, function () {
-  var port = server.address().port;
-  console.log("App now running in %s mode on port %d", app.get("env"), port);
+  })
+    .once('error', (err) => {
+      console.error(err);
+      process.exit(1);
+    })
+    .listen(port, () => {
+      console.log(`> Ready on http://${hostname}:${port}`);
+    });
 });
