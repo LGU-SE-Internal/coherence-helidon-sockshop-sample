@@ -1,19 +1,24 @@
 // API route for orders - maintains backend compatibility
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getBackendEndpoints } from '../../utils/backend';
+import { isValidPath, sanitizePath } from '../../utils/validation';
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
   const endpoints = getBackendEndpoints();
-  const { custId } = req.query;
   
   let url = endpoints.ordersUrl;
   if (req.url) {
     const urlPath = req.url.replace('/api/orders', '');
     if (urlPath) {
-      url = `${url}${urlPath}`;
+      // Validate path to prevent SSRF
+      const sanitized = sanitizePath(urlPath);
+      if (!isValidPath(sanitized)) {
+        return res.status(400).json({ error: 'Invalid URL path' });
+      }
+      url = `${url}${sanitized}`;
     }
   }
   

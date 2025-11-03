@@ -1,6 +1,7 @@
 // API route for cart - maintains backend compatibility
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getBackendEndpoints } from '../../utils/backend';
+import { isValidId } from '../../utils/validation';
 
 export default async function handler(
   req: NextApiRequest,
@@ -9,9 +10,14 @@ export default async function handler(
   const endpoints = getBackendEndpoints();
   const { custId } = req.query;
   
+  // Validate custId to prevent SSRF
+  if (custId && typeof custId === 'string' && !isValidId(custId)) {
+    return res.status(400).json({ error: 'Invalid customer ID format' });
+  }
+  
   let url = endpoints.cartsUrl;
-  if (custId) {
-    url = `${url}/${custId}/items`;
+  if (custId && typeof custId === 'string') {
+    url = `${url}/${encodeURIComponent(custId)}/items`;
   }
   
   try {

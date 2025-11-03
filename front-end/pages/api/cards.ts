@@ -1,6 +1,7 @@
 // API route for cards - maintains backend compatibility
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getBackendEndpoints } from '../../utils/backend';
+import { isValidPath, sanitizePath } from '../../utils/validation';
 
 export default async function handler(
   req: NextApiRequest,
@@ -12,7 +13,12 @@ export default async function handler(
   if (req.url) {
     const urlPath = req.url.replace('/api/cards', '');
     if (urlPath) {
-      url = `${url}${urlPath}`;
+      // Validate path to prevent SSRF
+      const sanitized = sanitizePath(urlPath);
+      if (!isValidPath(sanitized)) {
+        return res.status(400).json({ error: 'Invalid URL path' });
+      }
+      url = `${url}${sanitized}`;
     }
   }
   
