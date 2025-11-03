@@ -36,7 +36,7 @@ spec:
         kubernetes.io/os: linux
       containers:
       - name: front-end
-        image: 10.10.10.240/library/ss-frontend:df91f26
+        image: 10.10.10.240/library/ss-frontend:16db43d 
         env:
         - name: PORT
           value: "8080"
@@ -46,7 +46,7 @@ spec:
         - name: OTEL_SERVICE_NAME
           value: "frontend"
         - name: OTEL_EXPORTER_OTLP_ENDPOINT
-          value: "http://opentelemetry-kube-stack-deployment-collector.monitoring:4318"
+          value: "http://opentelemetry-kube-stack-deployment-collector.monitoring:4317"
         - name: OTEL_EXPORTER_OTLP_PROTOCOL
           value: "grpc"
         # Kubernetes namespace for OpenTelemetry resource attributes
@@ -64,7 +64,7 @@ spec:
         - name: WEB_OTEL_SERVICE_NAME
           value: "frontend"
         - name: PUBLIC_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
-          value: "http://opentelemetry-kube-stack-deployment-collector.monitoring:4318/v1/traces"
+          value: "http://opentelemetry-kube-stack-deployment-collector.monitoring:4317/v1/traces"
         - name: ENV_PLATFORM
           value: "kubernetes"
         resources:
