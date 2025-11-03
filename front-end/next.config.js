@@ -65,28 +65,28 @@ const nextConfig = {
       },
       // Rewrite API calls from frontend format to Next.js API routes
       {
-        source: '/catalogue:path*',
-        destination: '/api/catalogue:path*',
+        source: '/catalogue/:path*',
+        destination: '/api/catalogue/:path*',
       },
       {
-        source: '/cart:path*',
-        destination: '/api/cart:path*',
+        source: '/cart/:path*',
+        destination: '/api/cart/:path*',
       },
       {
-        source: '/orders:path*',
-        destination: '/api/orders:path*',
+        source: '/orders/:path*',
+        destination: '/api/orders/:path*',
       },
       {
-        source: '/customers:path*',
-        destination: '/api/customers:path*',
+        source: '/customers/:path*',
+        destination: '/api/customers/:path*',
       },
       {
-        source: '/addresses:path*',
-        destination: '/api/addresses:path*',
+        source: '/addresses/:path*',
+        destination: '/api/addresses/:path*',
       },
       {
-        source: '/cards:path*',
-        destination: '/api/cards:path*',
+        source: '/cards/:path*',
+        destination: '/api/cards/:path*',
       },
       {
         source: '/login',
