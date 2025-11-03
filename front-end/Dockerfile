@@ -11,15 +11,16 @@ COPY yarn.lock* yarn.lock*
 
 RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
-COPY components/ components/
 COPY gateways/ gateways/
 COPY pages/ pages/
 COPY providers/ providers/
 COPY styles/ styles/
+COPY types/ types/
 COPY utils/ utils/
 COPY public/ public/
 COPY next.config.js next.config.js
 COPY tsconfig.json tsconfig.json
+COPY Instrumentation.js Instrumentation.js
 
 RUN npm run build
 
@@ -45,7 +46,7 @@ COPY --from=builder /app/.next/standalone/ ./
 COPY --from=builder /app/.next/static/ .next/static/
 COPY --from=deps /app/node_modules/ node_modules/
 COPY --from=builder /app/public/ public/
-COPY ./Instrumentation.js Instrumentation.js
+COPY --from=builder /app/Instrumentation.js Instrumentation.js
 
 EXPOSE 8080
 
