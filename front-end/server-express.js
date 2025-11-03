@@ -15,12 +15,10 @@ var request      = require("request")
   , catalogue    = require("./api/catalogue")
   , orders       = require("./api/orders")
   , user         = require("./api/user")
-  , metrics      = require("./api/metrics")
   , app          = express()
 
 
 app.use(helpers.rewriteSlash);
-app.use(metrics);
 app.use(express.static("public"));
 if(process.env.SESSION_REDIS) {
     console.log('Using the redis based session manager');
