@@ -1,57 +1,29 @@
 # Copyright The OpenTelemetry Authors
 # SPDX-License-Identifier: Apache-2.0
+# Express.js + OpenTelemetry Frontend
 
-FROM docker.io/library/node:22-slim AS builder
+FROM docker.io/library/node:22-slim
 
 WORKDIR /app
 
+# Copy package files
 COPY package.json package.json
 COPY package-lock.json* package-lock.json*
 COPY yarn.lock* yarn.lock*
 
-RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
+# Install dependencies
+RUN if [ -f package-lock.json ]; then npm ci --production; else npm install --production; fi
 
-COPY gateways/ gateways/
-COPY pages/ pages/
-COPY providers/ providers/
-COPY styles/ styles/
-COPY types/ types/
-COPY utils/ utils/
+# Copy application files
+COPY api/ api/
+COPY config.js config.js
+COPY helpers/ helpers/
 COPY public/ public/
-COPY next.config.js next.config.js
-COPY tsconfig.json tsconfig.json
+COPY scripts/ scripts/
+COPY server-express.js server-express.js
 COPY Instrumentation.js Instrumentation.js
-
-RUN npm run build
-
-# -----------------------------------------------------------------------------
-
-FROM docker.io/library/node:22-slim AS deps
-
-WORKDIR /app
-
-COPY package.json package.json
-COPY package-lock.json* package-lock.json*
-COPY yarn.lock* yarn.lock*
-
-RUN if [ -f package-lock.json ]; then npm ci --omit=dev; else npm install --production; fi
-
-# -----------------------------------------------------------------------------
-
-FROM gcr.io/distroless/nodejs22-debian12:nonroot
-
-WORKDIR /app
-
-COPY --from=builder /app/.next/standalone/ ./
-COPY --from=builder /app/.next/static/ .next/static/
-COPY --from=deps /app/node_modules/ node_modules/
-COPY --from=builder /app/public/ public/
-COPY --from=builder /app/Instrumentation.js Instrumentation.js
-COPY --from=builder /app/utils/ utils/
-COPY --from=builder /app/gateways/ gateways/
-COPY --from=builder /app/providers/ providers/
-COPY --from=builder /app/types/ types/
+COPY utils/ utils/
 
 EXPOSE 8080
 
-CMD ["--require=./Instrumentation.js", "server.js"]
+CMD ["node", "--require", "./Instrumentation.js", "server-express.js"]
