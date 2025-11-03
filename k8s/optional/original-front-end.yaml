@@ -14,7 +14,7 @@ spec:
   type: NodePort
   ports:
   - port: 80
-    targetPort: 8079
+    targetPort: 8080
   selector:
     app: front-end
 ---
@@ -38,10 +38,18 @@ spec:
       - name: front-end
         image: 10.10.10.240/library/ss-frontend:df91f26
         env:
-        - name: OTEL_EXPORTER_OTLP_ENDPOINT
-          value: "http://opentelemetry-kube-stack-deployment-collector.monitoring:4318"
-        - name: OTEL_SERVICE_NAME
-          value: "front-end"
+        - name: PORT
+          value: "8080"
+        - name: BACKEND_DOMAIN
+          value: ".sockshop.svc.cluster.local"
+        - name: OTEL_COLLECTOR_HOST
+          value: "opentelemetry-kube-stack-deployment-collector.monitoring"
+        - name: WEB_OTEL_SERVICE_NAME
+          value: "frontend"
+        - name: PUBLIC_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+          value: "http://opentelemetry-kube-stack-deployment-collector.monitoring:4318/v1/traces"
+        - name: ENV_PLATFORM
+          value: "kubernetes"
         resources:
           requests:
             cpu: 100m
@@ -50,7 +58,7 @@ spec:
             cpu: 1000m
             memory: 400Mi
         ports:
-        - containerPort: 8079
+        - containerPort: 8080
         volumeMounts:
         - name: tmp
           mountPath: /tmp
