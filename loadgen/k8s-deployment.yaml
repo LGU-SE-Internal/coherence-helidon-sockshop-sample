@@ -100,7 +100,7 @@ spec:
     spec:
       containers:
       - name: loadgen
-        image: loadgen:latest
+        image: 10.10.10.240/library/ss-loadgen:1c9c7eff
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8089
