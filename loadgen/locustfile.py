@@ -2,7 +2,7 @@
 Load Generator for Coherence Helidon Sock Shop
 
 This load generator simulates realistic e-commerce user behavior with configurable
-load patterns and API call ratios.
+load patterns and API call ratios. Based on the original sockshop load test pattern.
 """
 
 import base64
@@ -17,13 +17,14 @@ class SockShopUser(TaskSet):
     """
     Simulates a user shopping on the Sock Shop application.
     Task weights reflect realistic e-commerce behavior patterns.
+    Follows the original sockshop load test API structure.
     """
 
     def on_start(self):
         """Initialize user session with catalog data"""
         self.catalogue = []
-        self.user_id = None
-        self.cart_id = None
+        self.logged_in = False
+        self.username = None
         
         # Load catalogue on start
         response = self.client.get("/catalogue")
@@ -36,18 +37,14 @@ class SockShopUser(TaskSet):
         Browse product catalogue (40% of requests)
         Most common user action - just browsing
         """
-        page = random.randint(1, 3)
-        size = random.randint(3, 12)
-        tags = random.choice(['', 'blue', 'green', 'formal', 'sport'])
+        # Get catalogue
+        response = self.client.get("/catalogue", name="/catalogue")
+        if response.status_code == 200:
+            self.catalogue = response.json()
         
-        params = {
-            'page': page,
-            'size': size
-        }
-        if tags:
-            params['tags'] = tags
-            
-        self.client.get("/catalogue", params=params, name="/catalogue")
+        # Sometimes view category page
+        if random.random() < 0.3:
+            self.client.get("/category.html", name="/category.html")
     
     @task(30)
     def view_product_details(self):
@@ -62,13 +59,19 @@ class SockShopUser(TaskSet):
         product_id = product.get('id')
         
         if product_id:
+            # View product detail page
+            self.client.get(f"/detail.html?id={product_id}", name="/detail.html?id=[id]")
+            
+            # Get product from API
             self.client.get(f"/catalogue/{product_id}", name="/catalogue/[id]")
             
             # Sometimes view the product image
             if random.random() < 0.5:
-                image_url = product.get('imageUrl', [''])[0]
-                if image_url:
-                    self.client.get(f"/catalogue{image_url}", name="/catalogue/images/[image]")
+                image_urls = product.get('imageUrl', [])
+                if image_urls and len(image_urls) > 0:
+                    image_url = image_urls[0] if isinstance(image_urls, list) else image_urls
+                    # Image URL is like /catalogue/images/xxx.jpg
+                    self.client.get(image_url, name="/catalogue/images/[image]")
     
     @task(10)
     def user_login_flow(self):
@@ -81,7 +84,7 @@ class SockShopUser(TaskSet):
         username = f"user{user_num}"
         password = "password"
         
-        # Try to login first
+        # Try to login with Basic Auth
         credentials = base64.b64encode(f"{username}:{password}".encode()).decode()
         response = self.client.get(
             "/login",
@@ -89,7 +92,7 @@ class SockShopUser(TaskSet):
             name="/login"
         )
         
-        # If login fails, try to register (simulates new user)
+        # If login fails (401), register new user (30% chance)
         if response.status_code == 401 and random.random() < 0.3:
             user_data = {
                 "username": username,
@@ -99,185 +102,133 @@ class SockShopUser(TaskSet):
                 "lastName": f"Last{user_num}"
             }
             
-            self.client.post(
+            register_response = self.client.post(
                 "/register",
                 json=user_data,
                 name="/register"
             )
             
-            # Try login again after registration
-            self.client.get(
-                "/login",
-                headers={"Authorization": f"Basic {credentials}"},
-                name="/login"
-            )
+            # Try login again after registration if successful
+            if register_response.status_code == 200:
+                response = self.client.get(
+                    "/login",
+                    headers={"Authorization": f"Basic {credentials}"},
+                    name="/login"
+                )
         
+        # Mark as logged in if successful
         if response.status_code == 200:
-            self.user_id = username
+            self.logged_in = True
+            self.username = username
     
     @task(15)
     def shopping_cart_operations(self):
         """
         Shopping cart operations (15% of requests)
-        Add, view, update, and remove items from cart
+        Add, view, and manage items in cart
+        Uses /cart endpoint (singular) as per original sockshop
         """
         if not self.catalogue:
             return
-            
-        # Use session-based cart ID if user not logged in
-        cart_id = self.user_id if self.user_id else f"session{random.randint(1, 1000)}"
         
-        # Get current cart
-        response = self.client.get(f"/carts/{cart_id}", name="/carts/[cartId]")
+        # Select a random product
+        product = random.choice(self.catalogue)
+        item_id = product.get('id')
         
-        # Add item to cart (most common cart operation)
-        if random.random() < 0.7:
-            product = random.choice(self.catalogue)
+        # View basket page (where cart is displayed)
+        self.client.get("/basket.html", name="/basket.html")
+        
+        # Add item to cart (most common cart operation - 70% chance)
+        if random.random() < 0.7 and item_id:
             item_data = {
-                "itemId": product.get('id'),
-                "unitPrice": product.get('price'),
+                "id": item_id,
                 "quantity": random.randint(1, 3)
             }
             
             self.client.post(
-                f"/carts/{cart_id}/items",
+                "/cart",
                 json=item_data,
-                name="/carts/[cartId]/items"
+                name="/cart POST"
             )
         
-        # View cart items
-        self.client.get(f"/carts/{cart_id}/items", name="/carts/[cartId]/items")
-        
-        # Sometimes update or delete items
-        if response.status_code == 200:
-            cart = response.json()
-            items = cart.get('items', [])
-            
-            if items and random.random() < 0.2:
-                item = random.choice(items)
-                item_id = item.get('itemId')
-                
-                # Update or delete
-                if random.random() < 0.5:
-                    # Update quantity
-                    item['quantity'] = random.randint(1, 5)
-                    self.client.patch(
-                        f"/carts/{cart_id}/items",
-                        json=item,
-                        name="/carts/[cartId]/items PATCH"
-                    )
-                else:
-                    # Delete item
-                    self.client.delete(
-                        f"/carts/{cart_id}/items/{item_id}",
-                        name="/carts/[cartId]/items/[itemId]"
-                    )
+        # Sometimes delete cart (20% chance - simulates clearing cart)
+        if random.random() < 0.2:
+            self.client.delete("/cart", name="/cart DELETE")
     
     @task(5)
     def place_order(self):
         """
-        Place an order (5% of requests)
-        Lowest frequency - represents actual conversions
-        Only a small percentage of users complete purchase
+        Complete purchase flow (5% of requests)
+        Simulates the full user journey from browsing to order placement
+        Based on original sockshop load test pattern
         """
-        if not self.user_id:
-            # Need to be logged in to place order
+        if not self.catalogue:
             return
-            
-        cart_id = self.user_id
         
-        # Get cart items
-        response = self.client.get(f"/carts/{cart_id}/items", name="/carts/[cartId]/items")
+        # Select a product
+        product = random.choice(self.catalogue)
+        item_id = product.get('id')
         
-        if response.status_code != 200:
+        if not item_id:
             return
+        
+        # Simulate full user journey
+        # 1. Visit home page
+        self.client.get("/", name="/")
+        
+        # 2. Browse catalogue
+        self.client.get("/catalogue", name="/catalogue")
+        
+        # 3. View category page
+        self.client.get("/category.html", name="/category.html")
+        
+        # 4. View product detail
+        self.client.get(f"/detail.html?id={item_id}", name="/detail.html?id=[id]")
+        
+        # 5. Login (if not already logged in)
+        if not self.logged_in:
+            username = f"user{random.randint(1, 10000)}"
+            password = "password"
+            credentials = base64.b64encode(f"{username}:{password}".encode()).decode()
             
-        items = response.json()
-        if not items:
-            # Cart is empty, add an item first
-            if self.catalogue:
-                product = random.choice(self.catalogue)
-                item_data = {
-                    "itemId": product.get('id'),
-                    "unitPrice": product.get('price'),
-                    "quantity": 1
+            response = self.client.get(
+                "/login",
+                headers={"Authorization": f"Basic {credentials}"},
+                name="/login"
+            )
+            
+            if response.status_code == 401:
+                # Register if doesn't exist
+                user_data = {
+                    "username": username,
+                    "password": password,
+                    "email": f"{username}@example.com",
+                    "firstName": f"First{username[-4:]}",
+                    "lastName": f"Last{username[-4:]}"
                 }
-                self.client.post(
-                    f"/carts/{cart_id}/items",
-                    json=item_data,
-                    name="/carts/[cartId]/items"
+                self.client.post("/register", json=user_data, name="/register")
+                # Login again
+                self.client.get(
+                    "/login",
+                    headers={"Authorization": f"Basic {credentials}"},
+                    name="/login"
                 )
         
-        # Get or create customer info
-        customer_response = self.client.get(f"/customers/{self.user_id}", name="/customers/[id]")
+        # 6. Clear cart
+        self.client.delete("/cart", name="/cart DELETE")
         
-        if customer_response.status_code != 200:
-            # Create customer
-            customer_data = {
-                "id": self.user_id,
-                "firstName": f"First{self.user_id}",
-                "lastName": f"Last{self.user_id}",
-                "username": self.user_id
-            }
-            self.client.post("/customers", json=customer_data, name="/customers")
+        # 7. Add item to cart
+        item_data = {
+            "id": item_id,
+            "quantity": 1
+        }
+        self.client.post("/cart", json=item_data, name="/cart POST")
         
-        # Add address if needed
-        address_response = self.client.get(f"/customers/{self.user_id}/addresses", name="/customers/[id]/addresses")
-        address_id = None
+        # 8. View basket
+        self.client.get("/basket.html", name="/basket.html")
         
-        if address_response.status_code == 200:
-            addresses = address_response.json().get('_embedded', {}).get('address', [])
-            if addresses:
-                address_id = addresses[0].get('id')
-        
-        if not address_id:
-            address_data = {
-                "street": "123 Main St",
-                "city": "Springfield",
-                "postcode": "12345",
-                "country": "USA"
-            }
-            addr_resp = self.client.post(
-                f"/customers/{self.user_id}/addresses",
-                json=address_data,
-                name="/customers/[id]/addresses"
-            )
-            if addr_resp.status_code == 200:
-                address_id = addr_resp.json().get('id')
-        
-        # Add card if needed
-        card_response = self.client.get(f"/customers/{self.user_id}/cards", name="/customers/[id]/cards")
-        card_id = None
-        
-        if card_response.status_code == 200:
-            cards = card_response.json().get('_embedded', {}).get('card', [])
-            if cards:
-                card_id = cards[0].get('id')
-        
-        if not card_id:
-            card_data = {
-                "longNum": "1234567890123456",
-                "expires": "12/25",
-                "ccv": "123"
-            }
-            card_resp = self.client.post(
-                f"/customers/{self.user_id}/cards",
-                json=card_data,
-                name="/customers/[id]/cards"
-            )
-            if card_resp.status_code == 200:
-                card_id = card_resp.json().get('id')
-        
-        # Place the order
-        if address_id and card_id:
-            order_data = {
-                "customer": {"href": f"/customers/{self.user_id}"},
-                "address": {"href": f"/addresses/{address_id}"},
-                "card": {"href": f"/cards/{card_id}"},
-                "items": {"href": f"/carts/{cart_id}/items"}
-            }
-            
-            self.client.post("/orders", json=order_data, name="/orders")
+        # 9. Place order
+        self.client.post("/orders", name="/orders")
 
 
 class WebsiteUser(HttpUser):

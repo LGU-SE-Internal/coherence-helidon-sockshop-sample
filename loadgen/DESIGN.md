@@ -176,6 +176,11 @@ user_behavior:
 - Python + Locust foundation
 - REST API testing focus
 - Docker support
+- **Original API structure compatibility**:
+  - Uses `/cart` endpoint (singular)
+  - Includes frontend page requests (`/`, `/category.html`, `/detail.html`, `/basket.html`)
+  - Proper authentication flow
+  - No requests to non-existent resources
 
 ### vs. TrainTicket Go Load Generator
 

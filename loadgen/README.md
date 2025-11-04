@@ -2,6 +2,8 @@
 
 A flexible, configuration-driven load generator for testing the Coherence Helidon Sock Shop microservices application. Built with Python and [Locust](https://locust.io/), it simulates realistic e-commerce user behavior with configurable load patterns.
 
+**Compatible with original WeaveSocks front-end API structure**, using the correct `/cart` (singular) endpoint and frontend page requests (`/`, `/category.html`, `/detail.html`, `/basket.html`).
+
 ## Features
 
 - **Realistic User Behavior**: Simulates actual e-commerce shopping patterns
@@ -10,6 +12,12 @@ A flexible, configuration-driven load generator for testing the Coherence Helido
   - User login/registration (10%)
   - Shopping cart operations (15%)
   - Order placement (5%)
+
+- **API Compatibility**: Follows original sockshop load test pattern
+  - Uses `/cart` endpoint (not `/carts/{id}`)
+  - Includes frontend page requests
+  - Proper authentication flow
+  - Avoids requests to non-existent resources
 
 - **Flexible Configuration**: YAML-based configuration for easy customization
   - Multiple predefined scenarios (light, medium, heavy, spike)
@@ -252,34 +260,37 @@ locust -f locustfile.py --worker --master-host=localhost
 
 ## User Scenarios
 
-The load generator simulates the following user journey:
+The load generator simulates the following user journey (based on original sockshop pattern):
 
 1. **Browse Catalogue** (40% of requests)
-   - Search with various filters
-   - Paginate through results
-   - View different categories
+   - Get product catalogue via `/catalogue` API
+   - View category page (`/category.html`)
+   - Realistic browsing behavior
 
 2. **View Product Details** (30% of requests)
-   - Click on specific products
-   - View product images
+   - View product detail page (`/detail.html?id={id}`)
+   - Fetch product details from API
+   - Load product images
    - Read descriptions and prices
 
 3. **User Management** (10% of requests)
-   - Login with credentials
-   - Register new accounts
-   - Handle authentication
+   - Login with credentials via `/login`
+   - Register new accounts via `/register`
+   - Handle authentication (Basic Auth)
 
 4. **Shopping Cart** (15% of requests)
-   - Add items to cart
-   - Update quantities
-   - Remove items
-   - View cart contents
+   - View basket page (`/basket.html`)
+   - Add items via `/cart` POST
+   - Clear cart via `/cart` DELETE
+   - Proper cart management
 
 5. **Place Order** (5% of requests)
-   - Complete purchase flow
-   - Add/use addresses
-   - Add/use payment cards
-   - Submit order
+   - Complete purchase flow from home to checkout
+   - Visit home page (`/`)
+   - Browse and select products
+   - Login/register if needed
+   - Add to cart
+   - Submit order via `/orders`
 
 ## Monitoring and Metrics
 
