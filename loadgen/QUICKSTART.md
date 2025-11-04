@@ -54,14 +54,25 @@ That's it! You're now generating load.
    ```bash
    kubectl apply -f k8s-deployment.yaml -n sockshop
    ```
+   
+   **Important**: The load generator starts automatically and runs **continuously** (no time limit). It begins generating load with 50 users as soon as the pod is ready.
 
-4. **Access web UI:**
+4. **Monitor load generation:**
    ```bash
-   kubectl port-forward -n sockshop service/loadgen 8089:8089
+   kubectl logs -n sockshop -l app=loadgen -f
    ```
 
-5. **Open browser:**
-   - Navigate to http://localhost:8089
+5. **To stop load generation:**
+   ```bash
+   # Scale to 0 (or delete deployment)
+   kubectl scale deployment loadgen -n sockshop --replicas=0
+   ```
+
+6. **To adjust load (optional):**
+   ```bash
+   # Edit deployment to change --users and --spawn-rate
+   kubectl edit deployment loadgen -n sockshop
+   ```
 
 ## Option 3: Local Python
 

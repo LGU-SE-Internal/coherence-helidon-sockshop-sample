@@ -105,6 +105,18 @@ spec:
         ports:
         - containerPort: 8089
           protocol: TCP
+        # Run locust in headless mode without time limit (continuous load generation)
+        # To adjust load: modify --users and --spawn-rate arguments
+        # To stop: delete the deployment or scale replicas to 0
+        command: ["locust"]
+        args:
+          - "-f"
+          - "locustfile.py"
+          - "--host=$(TARGET_HOST)"
+          - "--users=50"           # Number of concurrent users
+          - "--spawn-rate=5"       # Users spawned per second
+          - "--headless"           # Run without web UI
+          # No --run-time specified = runs indefinitely
         env:
         - name: TARGET_HOST
           value: "http://front-end.sockshop.svc.cluster.local"

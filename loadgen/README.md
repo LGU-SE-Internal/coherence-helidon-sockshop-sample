@@ -158,20 +158,42 @@ kubectl apply -f k8s-deployment.yaml -n sockshop
 This creates:
 - ConfigMap with load generator configuration
 - Service exposing the web UI
-- Deployment running the load generator
+- Deployment running the load generator **continuously in headless mode**
 
-### Access Web UI
+**Note**: The deployment automatically starts generating load (50 users) as soon as it's deployed. The load generator will run indefinitely until you delete the deployment or scale it to 0 replicas.
 
-Port-forward to access the web interface:
+### Control the Load Generator
+
+**To adjust load levels:**
 ```bash
-kubectl port-forward -n sockshop service/loadgen 8089:8089
+# Edit the deployment to change --users and --spawn-rate
+kubectl edit deployment loadgen -n sockshop
 ```
 
-Then open http://localhost:8089 in your browser.
+**To stop load generation:**
+```bash
+# Scale to 0 replicas (keeps configuration)
+kubectl scale deployment loadgen -n sockshop --replicas=0
 
-### Run Headless Test
+# Or delete the deployment entirely
+kubectl delete deployment loadgen -n sockshop
+```
 
-Run a one-time load test:
+**To resume load generation:**
+```bash
+kubectl scale deployment loadgen -n sockshop --replicas=1
+```
+
+### View Load Generator Logs
+
+Monitor the load generator output:
+```bash
+kubectl logs -n sockshop -l app=loadgen -f
+```
+
+### Run One-Time Load Test
+
+For temporary load testing (not continuous):
 ```bash
 kubectl run loadgen-test -n sockshop \
   --image=loadgen:latest \
