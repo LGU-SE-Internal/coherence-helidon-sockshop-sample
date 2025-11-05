@@ -24,6 +24,8 @@ otel:
     name: Shipping
   traces:
     exporter: otlp
+  agent:
+    present: true
   exporter:
     otlp:
       traces:

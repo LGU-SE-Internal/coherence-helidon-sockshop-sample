@@ -3,7 +3,7 @@ name: sockshop
 description: A Helm chart for Coherence Helidon Sock Shop application
 type: application
 version: 1.0.0
-appVersion: "2.3.3"
+appVersion: "2.4.0"
 keywords:
   - sockshop
   - microservices

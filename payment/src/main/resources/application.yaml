@@ -24,6 +24,8 @@ otel:
     name: Payment
   traces:
     exporter: otlp
+  agent:
+    present: true
   exporter:
     otlp:
       traces:

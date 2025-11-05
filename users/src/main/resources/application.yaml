@@ -22,6 +22,8 @@ otel:
     name: Users
   traces:
     exporter: otlp
+  agent:
+    present: true
   exporter:
     otlp:
       traces:

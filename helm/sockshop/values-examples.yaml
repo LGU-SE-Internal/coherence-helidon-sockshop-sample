@@ -128,19 +128,19 @@ carts:
 # Keep old version for other services
 catalog:
   image:
-    tag: "2.3.3"
+    tag: "2.4.0"
 orders:
   image:
-    tag: "2.3.3"
+    tag: "2.4.0"
 payment:
   image:
-    tag: "2.3.3"
+    tag: "2.4.0"
 shipping:
   image:
-    tag: "2.3.3"
+    tag: "2.4.0"
 users:
   image:
-    tag: "2.3.3"
+    tag: "2.4.0"
 
 ---
 # Example 6: Custom resources for high-performance deployment

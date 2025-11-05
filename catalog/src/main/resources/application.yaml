@@ -19,6 +19,8 @@ otel:
     name: Catalog
   traces:
     exporter: otlp
+  agent:
+    present: true
   exporter:
     otlp:
       traces:
