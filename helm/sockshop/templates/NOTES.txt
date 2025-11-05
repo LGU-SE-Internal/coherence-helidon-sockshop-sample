@@ -1,0 +1,69 @@
+Thank you for installing {{ .Chart.Name }}!
+
+Your Coherence Helidon Sock Shop has been deployed.
+
+Release name: {{ .Release.Name }}
+Namespace: {{ .Release.Namespace }}
+
+To access the application:
+
+{{- if .Values.frontend.enabled }}
+
+1. Frontend Service:
+{{- if eq .Values.frontend.service.type "NodePort" }}
+   Get the Node Port:
+   export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ .Values.frontend.name }})
+   export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+   echo "Frontend URL: http://$NODE_IP:$NODE_PORT/"
+
+   Or use port-forward:
+{{- end }}
+   kubectl port-forward --namespace {{ .Release.Namespace }} service/{{ .Values.frontend.name }} 8079:{{ .Values.frontend.service.port }}
+   
+   Then open http://localhost:8079 in your browser
+{{- end }}
+
+{{- if .Values.loadgen.enabled }}
+
+2. Load Generator:
+   The load generator is running with {{ .Values.loadgen.load.users }} concurrent users.
+   
+   To view load generator logs:
+   kubectl logs -n {{ .Release.Namespace }} -l app={{ .Values.loadgen.name }} -f
+   
+   To access the Locust web UI (if available):
+   kubectl port-forward --namespace {{ .Release.Namespace }} service/{{ .Values.loadgen.name }} 8089:{{ .Values.loadgen.service.port }}
+   
+   Then open http://localhost:8089 in your browser
+
+   To adjust load:
+   kubectl edit deployment {{ .Values.loadgen.name }} -n {{ .Release.Namespace }}
+   # Change --users and --spawn-rate arguments
+
+   To stop load generation:
+   kubectl scale deployment {{ .Values.loadgen.name }} -n {{ .Release.Namespace }} --replicas=0
+
+   To resume load generation:
+   kubectl scale deployment {{ .Values.loadgen.name }} -n {{ .Release.Namespace }} --replicas=1
+{{- end }}
+
+3. Backend Services Status:
+   kubectl get coherence -n {{ .Release.Namespace }}
+
+4. All Pods Status:
+   kubectl get pods -n {{ .Release.Namespace }}
+
+To scale backend services:
+   # Scale a specific service
+   kubectl scale coherence/{{ .Values.carts.name }} --replicas=3 -n {{ .Release.Namespace }}
+   
+   # Scale all services
+   for name in {{ .Values.carts.name }} {{ .Values.catalog.name }} {{ .Values.orders.name }} {{ .Values.payment.name }} {{ .Values.shipping.name }} {{ .Values.users.name }}; do
+       kubectl scale coherence/$name --replicas=3 -n {{ .Release.Namespace }}
+   done
+
+For more information:
+   - Documentation: https://github.com/oracle/coherence-helidon-sockshop-sample
+   - Load Generator: https://github.com/oracle/coherence-helidon-sockshop-sample/tree/main/loadgen
+
+Enjoy your Sock Shop! 🧦

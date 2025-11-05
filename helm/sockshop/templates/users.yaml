@@ -1,0 +1,37 @@
+{{- if .Values.users.enabled }}
+apiVersion: coherence.oracle.com/v1
+kind: Coherence
+metadata:
+  name: {{ .Values.users.name }}
+  labels:
+    {{- include "sockshop.service.labels" (dict "name" .Values.users.name) | nindent 4 }}
+spec:
+  cluster: {{ .Values.global.coherenceCluster }}
+  role: Users
+  replicas: {{ .Values.users.replicas }}
+  image: {{ include "sockshop.image" (dict "global" .Values.global "image" .Values.users.image) }}
+  readinessProbe:
+    initialDelaySeconds: {{ .Values.coherence.readinessProbe.initialDelaySeconds }}
+    periodSeconds: {{ .Values.coherence.readinessProbe.periodSeconds }}
+  application:
+    type: helidon
+  jvm:
+    memory:
+      heapSize: {{ .Values.coherence.jvm.memory.heapSize }}
+    args:
+      {{- toYaml .Values.coherence.jvm.args | nindent 6 }}
+  coherence:
+    metrics:
+      enabled: {{ .Values.coherence.metrics.enabled }}
+  ports:
+    - name: http
+      port: 7001
+      service:
+        name: {{ .Values.users.service.name }}
+        port: {{ .Values.users.service.port }}
+      serviceMonitor:
+        enabled: {{ .Values.coherence.serviceMonitor.enabled }}
+    - name: metrics
+      serviceMonitor:
+        enabled: {{ .Values.coherence.serviceMonitor.enabled }}
+{{- end }}

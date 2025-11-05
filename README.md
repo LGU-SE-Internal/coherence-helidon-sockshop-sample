@@ -27,6 +27,8 @@ as the application framework, in case one of those is your framework of choice.
 * [Project Structure](#project-structure)
 * [Pre-Requisites](#pre-requisites)
 * [How to Run](#how-to-run)
+  * [Option 1: Using Helm (Recommended)](#option-1-using-helm-recommended)
+  * [Option 2: Using Kustomize](#option-2-using-kustomize)
 * [Complete Application Deployment](./doc/complete-application-deployment.md)
 * [Load Testing](#load-testing)
 * [Alternate Coherence Topologies](./k8s/alternatives/topologies.md)
@@ -79,58 +81,124 @@ all project repositories at once.
 ## Pre-Requisites
 
 1. Latest version of `kubectl` available from https://kubernetes.io/docs/tasks/tools/.
-2. Docker or Rancher
-3. A remote or local Kubernetes cluster - Min 1.16+
-4. Maven 3.8+ and JDK 17
+2. Helm 3.0+ (for Helm installation method)
+3. Docker or Rancher
+4. A remote or local Kubernetes cluster - Min 1.16+
+5. Maven 3.8+ and JDK 17 (for development)
 
 ## How to Run
+
+There are two ways to deploy the Sock Shop application: using Helm (recommended) or using Kustomize.
+
+### Option 1: Using Helm (Recommended)
+
+The Helm chart provides a unified deployment that includes backend services, frontend, and load generator in a single command.
+
+#### Install the Coherence Operator
+
+Install the Coherence Operator using the instructions in the [Coherence Operator Quick Start](https://oracle.github.io/coherence-operator/docs/latest/#/docs/about/03_quickstart) documentation.
+
+Quick installation:
+```bash
+kubectl apply -f https://github.com/oracle/coherence-operator/releases/download/v3.3.4/coherence-operator.yaml
+```
+
+#### Deploy Sock Shop
+
+1. Create a namespace:
+```bash
+kubectl create namespace sockshop
+```
+
+2. Install the complete application (backend, frontend, and load generator):
+```bash
+helm install sockshop ./helm/sockshop -n sockshop
+```
+
+3. Check the deployment status:
+```bash
+kubectl get pods -n sockshop
+helm status sockshop -n sockshop
+```
+
+4. Access the application:
+```bash
+kubectl port-forward --namespace sockshop service/front-end 8079:80
+```
+
+Open http://localhost:8079 in your browser.
+
+#### Customization Examples
+
+Deploy without load generator:
+```bash
+helm install sockshop ./helm/sockshop -n sockshop --set loadgen.enabled=false
+```
+
+Deploy with scaled backend services:
+```bash
+helm install sockshop ./helm/sockshop -n sockshop \
+  --set carts.replicas=3 \
+  --set catalog.replicas=3 \
+  --set orders.replicas=3
+```
+
+Use custom image registry:
+```bash
+helm install sockshop ./helm/sockshop -n sockshop \
+  --set global.imageRegistry=my-registry.com
+```
+
+For more configuration options, see the [Helm Chart Documentation](./helm/README.md).
+
+#### Uninstall
+
+```bash
+helm uninstall sockshop --namespace sockshop
+```
+
+### Option 2: Using Kustomize
 
 Kubernetes scripts depend on Kustomize, so make sure that you have a newer 
 version of `kubectl` that supports it (at least 1.16 or above).
 
-The easiest way to try the demo is to use Kubernetes deployment scripts from this repo. 
-
-If you do, you can simply run the following command from the `coherence-helidon-sockshop-sample` directory.
-
-* Install the Coherence Operator
+#### Install the Coherence Operator
 
 Install the Coherence Operator using the instructions in the [Coherence Operator Quick Start](https://oracle.github.io/coherence-operator/docs/latest/#/docs/about/03_quickstart) documentation.
 
+#### Installing Backend Services
 
-* **Installing a Back-end**
-
-Create a namespace in Kubernetes called `sockshop`.
+Create a namespace in Kubernetes called `sockshop`:
 
 ```bash
 kubectl create namespace sockshop
 ```
 
-Install the back-end into the `sockshop` namespace.
+Install the backend services into the `sockshop` namespace:
 
 ```bash
 kubectl apply -k k8s/coherence --namespace sockshop
 ```
 
-TIP: You can see the state of the pods using:
+#### Install Frontend
 
-```bash
-kubectl --namespace sockshop get pods
-```
-
-### (Optional) Install the Original WeaveSocks Front End
-
-> Warning: The original WeaveSocks Front End has a few bugs, as well as some security issues, 
-> and it hasn't been actively maintained for a few years. However, if you want to deploy
-> it nevertheless to see how it interacts with our back-end services, please follow
-> the steps below.
-
-Install the `front-end` service by running the following command:
+Install the frontend service:
 
 ```bash
 kubectl apply -f k8s/optional/original-front-end.yaml --namespace sockshop
 ```
 
-Port-forward to the `front-end` UI using the following
+#### Install Load Generator (Optional)
+
+Install the load generator for performance testing:
+
+```bash
+kubectl apply -f loadgen/k8s-deployment.yaml --namespace sockshop
+```
+
+#### Access the Application
+
+Port-forward to the `front-end` UI:
 
 ```bash
 kubectl port-forward --namespace sockshop service/front-end 8079:80
@@ -143,9 +211,18 @@ You should be able to access the home page for the application by pointing your 
 You should then be able to browse product catalog, add products to shopping cart, register as a new user, place an order,
 browse order history, etc.
 
+#### Check Pod Status
+
+```bash
+kubectl --namespace sockshop get pods
+```
+
+#### Cleanup
+
 Once you are finished, you can clean up the environment by executing the following:
 
 ```bash
+kubectl delete -f loadgen/k8s-deployment.yaml --namespace sockshop
 kubectl delete -f k8s/optional/original-front-end.yaml --namespace sockshop
 kubectl delete -k k8s/coherence --namespace sockshop
 ```

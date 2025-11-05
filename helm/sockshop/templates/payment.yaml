@@ -1,0 +1,37 @@
+{{- if .Values.payment.enabled }}
+apiVersion: coherence.oracle.com/v1
+kind: Coherence
+metadata:
+  name: {{ .Values.payment.name }}
+  labels:
+    {{- include "sockshop.service.labels" (dict "name" .Values.payment.name) | nindent 4 }}
+spec:
+  cluster: {{ .Values.global.coherenceCluster }}
+  role: Payment
+  replicas: {{ .Values.payment.replicas }}
+  image: {{ include "sockshop.image" (dict "global" .Values.global "image" .Values.payment.image) }}
+  readinessProbe:
+    initialDelaySeconds: {{ .Values.coherence.readinessProbe.initialDelaySeconds }}
+    periodSeconds: {{ .Values.coherence.readinessProbe.periodSeconds }}
+  application:
+    type: helidon
+  jvm:
+    memory:
+      heapSize: {{ .Values.coherence.jvm.memory.heapSize }}
+    args:
+      {{- toYaml .Values.coherence.jvm.args | nindent 6 }}
+  coherence:
+    metrics:
+      enabled: {{ .Values.coherence.metrics.enabled }}
+  ports:
+    - name: http
+      port: 7001
+      service:
+        name: {{ .Values.payment.service.name }}
+        port: {{ .Values.payment.service.port }}
+      serviceMonitor:
+        enabled: {{ .Values.coherence.serviceMonitor.enabled }}
+    - name: metrics
+      serviceMonitor:
+        enabled: {{ .Values.coherence.serviceMonitor.enabled }}
+{{- end }}

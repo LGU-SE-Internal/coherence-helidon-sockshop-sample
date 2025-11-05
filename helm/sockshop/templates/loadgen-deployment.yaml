@@ -1,0 +1,69 @@
+{{- if .Values.loadgen.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.loadgen.name }}
+  labels:
+    {{- include "sockshop.service.labels" (dict "name" .Values.loadgen.name) | nindent 4 }}
+spec:
+  type: {{ .Values.loadgen.service.type }}
+  ports:
+    - port: {{ .Values.loadgen.service.port }}
+      targetPort: {{ .Values.loadgen.service.targetPort }}
+      protocol: TCP
+      name: web
+  selector:
+    {{- include "sockshop.service.selectorLabels" (dict "name" .Values.loadgen.name) | nindent 4 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.loadgen.name }}
+  labels:
+    {{- include "sockshop.service.labels" (dict "name" .Values.loadgen.name) | nindent 4 }}
+spec:
+  replicas: {{ .Values.loadgen.replicas }}
+  selector:
+    matchLabels:
+      {{- include "sockshop.service.selectorLabels" (dict "name" .Values.loadgen.name) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "sockshop.service.labels" (dict "name" .Values.loadgen.name) | nindent 8 }}
+    spec:
+      containers:
+      - name: {{ .Values.loadgen.name }}
+        image: {{ include "sockshop.image" (dict "global" .Values.global "image" .Values.loadgen.image) }}
+        imagePullPolicy: {{ .Values.loadgen.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.loadgen.service.targetPort }}
+          protocol: TCP
+        command: ["locust"]
+        args:
+          - "-f"
+          - "locustfile.py"
+          - "--host=$(TARGET_HOST)"
+          - "--users={{ .Values.loadgen.load.users }}"
+          - "--spawn-rate={{ .Values.loadgen.load.spawnRate }}"
+          - "--headless"
+          {{- if .Values.loadgen.load.runTime }}
+          - "--run-time={{ .Values.loadgen.load.runTime }}"
+          {{- end }}
+        env:
+        - name: TARGET_HOST
+          value: {{ .Values.loadgen.load.targetHost | quote }}
+        - name: LOCUST_MIN_WAIT
+          value: {{ .Values.loadgen.load.minWait | quote }}
+        - name: LOCUST_MAX_WAIT
+          value: {{ .Values.loadgen.load.maxWait | quote }}
+        volumeMounts:
+        - name: config
+          mountPath: /loadgen/config.yaml
+          subPath: config.yaml
+        resources:
+          {{- toYaml .Values.loadgen.resources | nindent 10 }}
+      volumes:
+      - name: config
+        configMap:
+          name: loadgen-config
+{{- end }}
