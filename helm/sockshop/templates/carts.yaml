@@ -1,0 +1,37 @@
+{{- if .Values.carts.enabled }}
+apiVersion: coherence.oracle.com/v1
+kind: Coherence
+metadata:
+  name: {{ .Values.carts.name }}
+  labels:
+    {{- include "sockshop.service.labels" (dict "name" .Values.carts.name) | nindent 4 }}
+spec:
+  cluster: {{ .Values.global.coherenceCluster }}
+  role: Carts
+  replicas: {{ .Values.carts.replicas }}
+  image: {{ include "sockshop.image" (dict "global" .Values.global "image" .Values.carts.image) }}
+  readinessProbe:
+    initialDelaySeconds: {{ .Values.coherence.readinessProbe.initialDelaySeconds }}
+    periodSeconds: {{ .Values.coherence.readinessProbe.periodSeconds }}
+  application:
+    type: helidon
+  jvm:
+    memory:
+      heapSize: {{ .Values.coherence.jvm.memory.heapSize }}
+    args:
+      {{- toYaml .Values.coherence.jvm.args | nindent 6 }}
+  coherence:
+    metrics:
+      enabled: {{ .Values.coherence.metrics.enabled }}
+  ports:
+    - name: http
+      port: 7001
+      service:
+        name: {{ .Values.carts.service.name }}
+        port: {{ .Values.carts.service.port }}
+      serviceMonitor:
+        enabled: {{ .Values.coherence.serviceMonitor.enabled }}
+    - name: metrics
+      serviceMonitor:
+        enabled: {{ .Values.coherence.serviceMonitor.enabled }}
+{{- end }}

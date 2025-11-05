@@ -1,0 +1,17 @@
+apiVersion: v2
+name: sockshop
+description: A Helm chart for Coherence Helidon Sock Shop application
+type: application
+version: 1.0.0
+appVersion: "2.3.3"
+keywords:
+  - sockshop
+  - microservices
+  - coherence
+  - helidon
+  - e-commerce
+home: https://github.com/oracle/coherence-helidon-sockshop-sample
+sources:
+  - https://github.com/oracle/coherence-helidon-sockshop-sample
+maintainers:
+  - name: Oracle Coherence Team

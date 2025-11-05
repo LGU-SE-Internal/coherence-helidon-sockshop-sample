@@ -1,0 +1,46 @@
+{{- if .Values.loadgen.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: loadgen-config
+  labels:
+    {{- include "sockshop.service.labels" (dict "name" .Values.loadgen.name) | nindent 4 }}
+data:
+  config.yaml: |
+    # Load Generator Configuration for Coherence Helidon Sock Shop
+    #
+    # This file allows you to customize load patterns and API call distributions
+    # without modifying the Python code.
+
+    # Load test scenarios
+    scenarios:
+{{- range $key, $value := .Values.loadgen.config.scenarios }}
+      {{ $key }}:
+        users: {{ $value.users }}
+        spawn_rate: {{ $value.spawn_rate }}
+        run_time: {{ $value.run_time | quote }}
+        description: {{ $value.description | quote }}
+{{- end }}
+
+    # API endpoint weights (must sum to 100)
+    # These weights reflect realistic e-commerce user behavior
+    api_weights:
+      browse_catalogue: {{ .Values.loadgen.config.api_weights.browse_catalogue }}
+      view_product_details: {{ .Values.loadgen.config.api_weights.view_product_details }}
+      user_login_flow: {{ .Values.loadgen.config.api_weights.user_login_flow }}
+      shopping_cart: {{ .Values.loadgen.config.api_weights.shopping_cart }}
+      place_order: {{ .Values.loadgen.config.api_weights.place_order }}
+
+    # User behavior configuration
+    user_behavior:
+      min_wait: {{ .Values.loadgen.config.user_behavior.min_wait }}
+      max_wait: {{ .Values.loadgen.config.user_behavior.max_wait }}
+      
+      # Probabilities for various user actions (0.0 to 1.0)
+      probabilities:
+        view_image: {{ .Values.loadgen.config.user_behavior.probabilities.view_image }}
+        register_on_login_fail: {{ .Values.loadgen.config.user_behavior.probabilities.register_on_login_fail }}
+        add_to_cart: {{ .Values.loadgen.config.user_behavior.probabilities.add_to_cart }}
+        modify_cart_item: {{ .Values.loadgen.config.user_behavior.probabilities.modify_cart_item }}
+        delete_vs_update: {{ .Values.loadgen.config.user_behavior.probabilities.delete_vs_update }}
+{{- end }}

@@ -1,0 +1,206 @@
+# Default values for sockshop Helm chart
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# Global settings
+global:
+  # Docker image registry
+  imageRegistry: "10.10.10.240/library"
+  # Image pull policy
+  imagePullPolicy: IfNotPresent
+  # Coherence cluster name
+  coherenceCluster: "SockShop"
+
+# Frontend configuration
+frontend:
+  enabled: true
+  name: front-end
+  replicas: 1
+  image:
+    repository: ss-frontend
+    tag: "3eea74f"
+    pullPolicy: IfNotPresent
+  service:
+    type: NodePort
+    port: 80
+    targetPort: 8079
+  resources:
+    requests:
+      cpu: 100m
+      memory: 400Mi
+    limits:
+      cpu: 1000m
+      memory: 400Mi
+  env:
+    # OpenTelemetry configuration
+    otelExporterEndpoint: "http://opentelemetry-kube-stack-deployment-collector.monitoring:4318"
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 10001
+    capabilities:
+      drop:
+        - all
+    readOnlyRootFilesystem: true
+
+# Load generator configuration
+loadgen:
+  enabled: true
+  name: loadgen
+  replicas: 1
+  image:
+    repository: ss-loadgen
+    tag: "879a1cd"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8089
+    targetPort: 8089
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  # Load generation settings
+  load:
+    users: 50
+    spawnRate: 5
+    # Set runTime to empty string for continuous load generation
+    runTime: ""
+    targetHost: "http://front-end.sockshop.svc.cluster.local"
+    minWait: 1
+    maxWait: 3
+  # Configuration file content
+  config:
+    scenarios:
+      light:
+        users: 10
+        spawn_rate: 2
+        run_time: "5m"
+        description: "Light load scenario for basic testing and validation"
+      medium:
+        users: 50
+        spawn_rate: 5
+        run_time: "15m"
+        description: "Medium load scenario for typical production traffic"
+      heavy:
+        users: 200
+        spawn_rate: 10
+        run_time: "30m"
+        description: "Heavy load scenario for stress testing"
+      spike:
+        users: 500
+        spawn_rate: 50
+        run_time: "10m"
+        description: "Spike test to verify system resilience under sudden load"
+    api_weights:
+      browse_catalogue: 40
+      view_product_details: 30
+      user_login_flow: 10
+      shopping_cart: 15
+      place_order: 5
+    user_behavior:
+      min_wait: 1.0
+      max_wait: 3.0
+      probabilities:
+        view_image: 0.5
+        register_on_login_fail: 0.3
+        add_to_cart: 0.7
+        modify_cart_item: 0.2
+        delete_vs_update: 0.5
+
+# Backend services configuration
+# Common settings for all Coherence-based microservices
+coherence:
+  # Common JVM settings
+  jvm:
+    memory:
+      heapSize: 2g
+    args:
+      - "-Dhelidon.serialFilter.ignoreFiles=true"
+      - "-Dhelidon.serialFilter.pattern=*"
+      - "-Dhelidon.serialFilter.failure.action=WARN"
+  # Coherence settings
+  metrics:
+    enabled: true
+  # Readiness probe settings
+  readinessProbe:
+    initialDelaySeconds: 10
+    periodSeconds: 10
+  # Service monitor settings
+  serviceMonitor:
+    enabled: true
+
+# Carts service
+carts:
+  enabled: true
+  name: carts
+  replicas: 1
+  image:
+    repository: ss-carts
+    tag: "2.3.3"
+  service:
+    name: carts
+    port: 80
+
+# Catalog service
+catalog:
+  enabled: true
+  name: catalog
+  replicas: 1
+  image:
+    repository: ss-catalog
+    tag: "2.3.3"
+  service:
+    # Use "catalogue" for compatibility with the existing front-end
+    name: catalogue
+    port: 80
+
+# Orders service
+orders:
+  enabled: true
+  name: orders
+  replicas: 1
+  image:
+    repository: ss-orders
+    tag: "2.3.3"
+  service:
+    name: orders
+    port: 80
+
+# Payment service
+payment:
+  enabled: true
+  name: payment
+  replicas: 1
+  image:
+    repository: ss-payment
+    tag: "2.3.3"
+  service:
+    name: payment
+    port: 80
+
+# Shipping service
+shipping:
+  enabled: true
+  name: shipping
+  replicas: 1
+  image:
+    repository: ss-shipping
+    tag: "2.3.3"
+  service:
+    name: shipping
+    port: 80
+
+# Users service
+users:
+  enabled: true
+  name: users
+  replicas: 1
+  image:
+    repository: ss-users
+    tag: "2.3.3"
+  service:
+    name: user
+    port: 80
