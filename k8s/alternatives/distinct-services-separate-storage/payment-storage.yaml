@@ -11,7 +11,7 @@ metadata:
 spec:
   role: PaymentStorage
   replicas: 1
-  image: 10.10.10.240/library/ss-payment:2.3.3
+  image: 10.10.10.240/library/ss-payment:2.4.1
   readinessProbe:
     initialDelaySeconds: 10
     periodSeconds: 10

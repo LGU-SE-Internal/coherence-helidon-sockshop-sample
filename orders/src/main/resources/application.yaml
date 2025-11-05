@@ -36,6 +36,8 @@ otel:
     exporter: otlp
   logs:
     exporter: otlp
+  agent:
+    present: true
   exporter:
     otlp:
       traces:

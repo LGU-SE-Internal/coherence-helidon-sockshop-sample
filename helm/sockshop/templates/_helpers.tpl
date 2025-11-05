@@ -71,3 +71,7 @@ Selector labels for services
 {{- define "sockshop.service.selectorLabels" -}}
 app: {{ .name }}
 {{- end }}
+
+{{- define "sockshop.otel.podAnnotations" -}}
+instrumentation.opentelemetry.io/inject-java: "monitoring/opentelemetry-kube-stack"
+{{- end }}
