@@ -26,11 +26,13 @@ public class Application {
 		SLF4JBridgeHandler.removeHandlersForRootLogger();
 		SLF4JBridgeHandler.install();
 		
-		// Initialize OpenTelemetry logs explicitly before starting the server
-		// Helidon MP Telemetry autoconfigures traces, but not logs
-		initializeOpenTelemetryLogs();
+		// Start the server - this will initialize Helidon's OpenTelemetry with traces
+		Server server = Server.create();
+		server.start();
 		
-		Server.create().start();
+		// NOW initialize OpenTelemetry logs after Helidon has set up GlobalOpenTelemetry
+		// This ensures the span context is available when logs are emitted
+		initializeOpenTelemetryLogs();
 	}
 	
 	private static void initializeOpenTelemetryLogs() {
@@ -58,7 +60,8 @@ public class Application {
 				.build();
 		
 		// Create an OpenTelemetry SDK instance with logs support
-		// Helidon manages traces via GlobalOpenTelemetry, but we need a separate instance for logs
+		//NOTE: The span context comes from the global Context API (set by Helidon's tracer)
+		// The appender will use this SDK for log export, but get span context from Context.current()
 		OpenTelemetrySdk openTelemetrySdk = OpenTelemetrySdk.builder()
 				.setLoggerProvider(sdkLoggerProvider)
 				.build();
@@ -67,7 +70,8 @@ public class Application {
 		Runtime.getRuntime().addShutdownHook(new Thread(openTelemetrySdk::close));
 		
 		// Install the SDK in the Logback appender
-		// This bridges Logback logs to OpenTelemetry log records with OTLP export
+		// The appender uses Context.current() to get span context (from Helidon's tracer)
+		// and uses this SDK's LoggerProvider to emit logs with OTLP export
 		io.opentelemetry.instrumentation.logback.appender.v1_0.OpenTelemetryAppender.install(openTelemetrySdk);
 	}
 }
