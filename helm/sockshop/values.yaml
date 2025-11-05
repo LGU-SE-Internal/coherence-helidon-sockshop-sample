@@ -139,7 +139,7 @@ carts:
   replicas: 1
   image:
     repository: ss-carts
-    tag: "2.3.4"
+    tag: "2.3.5"
   service:
     name: carts
     port: 80
@@ -151,7 +151,7 @@ catalog:
   replicas: 1
   image:
     repository: ss-catalog
-    tag: "2.3.4"
+    tag: "2.3.5"
   service:
     # Use "catalogue" for compatibility with the existing front-end
     name: catalogue
@@ -164,7 +164,7 @@ orders:
   replicas: 1
   image:
     repository: ss-orders
-    tag: "2.3.4"
+    tag: "2.3.5"
   service:
     name: orders
     port: 80
@@ -176,7 +176,7 @@ payment:
   replicas: 1
   image:
     repository: ss-payment
-    tag: "2.3.4"
+    tag: "2.3.5"
   service:
     name: payment
     port: 80
@@ -188,7 +188,7 @@ shipping:
   replicas: 1
   image:
     repository: ss-shipping
-    tag: "2.3.4"
+    tag: "2.3.5"
   service:
     name: shipping
     port: 80
@@ -200,7 +200,7 @@ users:
   replicas: 1
   image:
     repository: ss-users
-    tag: "2.3.4"
+    tag: "2.3.5"
   service:
     name: user
     port: 80
