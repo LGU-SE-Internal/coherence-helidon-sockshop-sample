@@ -19,7 +19,11 @@ otel:
     name: Catalog
   traces:
     exporter: otlp
+  logs:
+    exporter: otlp
   exporter:
     otlp:
       traces:
+        endpoint: http://opentelemetry-kube-stack-deployment-collector.monitoring:4317
+      logs:
         endpoint: http://opentelemetry-kube-stack-deployment-collector.monitoring:4317

@@ -299,7 +299,7 @@
                         <argument>-Dotel.sdk.disabled=false</argument>
                         <argument>-Dotel.java.global-autoconfigure.enabled=true</argument>
                         <argument>-Dotel.metrics.exporter=none</argument>
-                        <argument>-Dotel.logs.exporter=none</argument>
+                        <argument>-Dotel.logs.exporter=otlp</argument>
                         <argument>-Dotel.service.name=Orders</argument>
                         <argument>-classpath</argument>
                         <classpath/>
