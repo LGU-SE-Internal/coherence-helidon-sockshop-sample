@@ -7,30 +7,67 @@
 package com.oracle.coherence.examples.sockshop.helidon.payment;
 
 import io.helidon.microprofile.server.Server;
-import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.exporter.otlp.logs.OtlpGrpcLogRecordExporter;
+import io.opentelemetry.sdk.OpenTelemetrySdk;
+import io.opentelemetry.sdk.logs.SdkLoggerProvider;
+import io.opentelemetry.sdk.logs.export.BatchLogRecordProcessor;
+import io.opentelemetry.sdk.resources.Resource;
 import org.slf4j.bridge.SLF4JBridgeHandler;
+
+import static io.opentelemetry.semconv.ServiceAttributes.SERVICE_NAME;
 
 /**
  * Entry point into the application
  */
 public class Application {
 	public static void main(String... args) {
-		// Initialize OpenTelemetry before starting the server
-		initializeOpenTelemetry();
-		
-		// Route JUL logs to SLF4J
+		// Route JUL logs to SLF4J first, before initializing OpenTelemetry
 		SLF4JBridgeHandler.removeHandlersForRootLogger();
 		SLF4JBridgeHandler.install();
+		
+		// Initialize OpenTelemetry logs explicitly before starting the server
+		// Helidon MP Telemetry autoconfigures traces, but not logs
+		initializeOpenTelemetryLogs();
 		
 		Server.create().start();
 	}
 	
-	private static void initializeOpenTelemetry() {
-		// Get the global OpenTelemetry instance configured by Helidon
-		OpenTelemetry openTelemetry = GlobalOpenTelemetry.get();
+	private static void initializeOpenTelemetryLogs() {
+		// Get the OTLP endpoint from system properties or environment, with fallback to config
+		String otlpEndpoint = System.getProperty("otel.exporter.otlp.logs.endpoint",
+				System.getProperty("otel.exporter.otlp.endpoint",
+						System.getenv().getOrDefault("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT",
+								System.getenv().getOrDefault("OTEL_EXPORTER_OTLP_ENDPOINT",
+										"http://opentelemetry-kube-stack-deployment-collector.monitoring:4317"))));
 		
-		// Install OpenTelemetry in the Logback appender
-		io.opentelemetry.instrumentation.logback.appender.v1_0.OpenTelemetryAppender.install(openTelemetry);
+		String serviceName = System.getProperty("otel.service.name",
+				System.getenv().getOrDefault("OTEL_SERVICE_NAME", "payment"));
+		
+		// Create a log exporter that sends logs to the OTLP collector
+		OtlpGrpcLogRecordExporter logExporter = OtlpGrpcLogRecordExporter.builder()
+				.setEndpoint(otlpEndpoint)
+				.build();
+		
+		// Create the SdkLoggerProvider with the exporter
+		SdkLoggerProvider sdkLoggerProvider = SdkLoggerProvider.builder()
+				.setResource(Resource.getDefault().toBuilder()
+						.put(SERVICE_NAME, serviceName)
+						.build())
+				.addLogRecordProcessor(BatchLogRecordProcessor.builder(logExporter).build())
+				.build();
+		
+		// Create an OpenTelemetry SDK instance with logs support
+		// Helidon manages traces via GlobalOpenTelemetry, but we need a separate instance for logs
+		OpenTelemetrySdk openTelemetrySdk = OpenTelemetrySdk.builder()
+				.setLoggerProvider(sdkLoggerProvider)
+				.build();
+		
+		// Add shutdown hook to flush logs before application exits
+		Runtime.getRuntime().addShutdownHook(new Thread(openTelemetrySdk::close));
+		
+		// Install the SDK in the Logback appender
+		// This bridges Logback logs to OpenTelemetry log records with OTLP export
+		io.opentelemetry.instrumentation.logback.appender.v1_0.OpenTelemetryAppender.install(openTelemetrySdk);
 	}
 }
