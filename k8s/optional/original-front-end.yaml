@@ -36,7 +36,7 @@ spec:
         kubernetes.io/os: linux
       containers:
       - name: front-end
-        image: 10.10.10.240/library/ss-frontend:otel-2
+        image: 10.10.10.240/library/ss-frontend:3eea74f
         env:
         - name: OTEL_EXPORTER_OTLP_ENDPOINT
           value: "http://opentelemetry-kube-stack-deployment-collector.monitoring:4318"
