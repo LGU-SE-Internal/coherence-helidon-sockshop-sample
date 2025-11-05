@@ -25,6 +25,7 @@ class SockShopUser(TaskSet):
         self.catalogue = []
         self.logged_in = False
         self.username = None
+        self.user_pool_size = 100  # Smaller user pool for better reuse
         
         # Load catalogue on start
         response = self.client.get("/catalogue")
@@ -78,28 +79,14 @@ class SockShopUser(TaskSet):
         """
         User registration and login flow (10% of requests)
         Moderate frequency - new users or returning users logging in
+        Uses smaller user pool to increase reuse and reduce registration conflicts
         """
-        # Generate random user credentials
-        user_num = random.randint(1, 10000)
+        # Use smaller user pool to encourage reuse (reduces 409 conflicts)
+        user_num = random.randint(1, self.user_pool_size)
         username = f"user{user_num}"
         password = "password"
         
-        # Register first if it's a new user (50% chance)
-        # This reduces 401 errors during testing
-        if random.random() < 0.5:
-            user_data = {
-                "username": username,
-                "password": password,
-                "email": f"{username}@example.com",
-                "firstName": f"First{user_num}",
-                "lastName": f"Last{user_num}"
-            }
-            
-            # Register (no-op if user already exists)
-            # Let failures be reported as failures
-            self.client.post("/register", json=user_data, name="/register")
-        
-        # Try to login with Basic Auth
+        # Try login first (most users should already exist)
         credentials = base64.b64encode(f"{username}:{password}".encode()).decode()
         response = self.client.get(
             "/login",
@@ -110,6 +97,28 @@ class SockShopUser(TaskSet):
         if response.status_code == 200:
             self.logged_in = True
             self.username = username
+        elif response.status_code == 401:
+            # User doesn't exist, try to register
+            user_data = {
+                "username": username,
+                "password": password,
+                "email": f"{username}@example.com",
+                "firstName": f"First{user_num}",
+                "lastName": f"Last{user_num}"
+            }
+            
+            register_response = self.client.post("/register", json=user_data, name="/register")
+            
+            # If registration succeeded, try login again
+            if register_response.status_code == 200:
+                response = self.client.get(
+                    "/login",
+                    headers={"Authorization": f"Basic {credentials}"},
+                    name="/login"
+                )
+                if response.status_code == 200:
+                    self.logged_in = True
+                    self.username = username
     
     @task(15)
     def shopping_cart_operations(self):
@@ -177,33 +186,43 @@ class SockShopUser(TaskSet):
         self.client.get(f"/detail.html?id={item_id}", name="/detail.html?id=[id]")
         
         # 5. Login/Register to have a user account (required for orders)
-        username = f"user{random.randint(1, 10000)}"
+        # Use smaller user pool to increase reuse
+        user_num = random.randint(1, self.user_pool_size)
+        username = f"user{user_num}"
         password = "password"
         credentials = base64.b64encode(f"{username}:{password}".encode()).decode()
         
-        # Try to register first to ensure user exists
-        user_data = {
-            "username": username,
-            "password": password,
-            "email": f"{username}@example.com",
-            "firstName": f"First{username[-4:]}",
-            "lastName": f"Last{username[-4:]}"
-        }
-        register_response = self.client.post("/register", json=user_data, name="/register")
-        
-        # If registration failed with something other than 409 (conflict), skip order
-        if register_response.status_code not in [200, 409]:
-            return
-        
-        # Login
+        # Try login first
         login_response = self.client.get(
             "/login",
             headers={"Authorization": f"Basic {credentials}"},
             name="/login"
         )
         
+        # If user doesn't exist (401), register them
+        if login_response.status_code == 401:
+            user_data = {
+                "username": username,
+                "password": password,
+                "email": f"{username}@example.com",
+                "firstName": f"First{user_num}",
+                "lastName": f"Last{user_num}"
+            }
+            register_response = self.client.post("/register", json=user_data, name="/register")
+            
+            # If registration failed, skip order
+            if register_response.status_code != 200:
+                return
+            
+            # Try login again after successful registration
+            login_response = self.client.get(
+                "/login",
+                headers={"Authorization": f"Basic {credentials}"},
+                name="/login"
+            )
+        
+        # If login still failed, skip order
         if login_response.status_code != 200:
-            # Login failed, skip order
             return
         
         # 6. Create address for the user (required for orders)
