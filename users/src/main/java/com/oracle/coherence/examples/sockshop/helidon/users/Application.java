@@ -33,7 +33,6 @@ public class Application {
 		OpenTelemetry openTelemetry = GlobalOpenTelemetry.get();
 		
 		// Install OpenTelemetry in the Logback appender
-		io.opentelemetry.instrumentation.logback.appender.v1_0.OpenTelemetryAppender.install(
-			openTelemetry);
+		io.opentelemetry.instrumentation.logback.appender.v1_0.OpenTelemetryAppender.install(openTelemetry);
 	}
 }
