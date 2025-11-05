@@ -96,26 +96,20 @@ class SockShopUser(TaskSet):
             }
             
             # Register (no-op if user already exists)
-            with self.client.post("/register", json=user_data, name="/register", catch_response=True) as response:
-                # 200 = new user, 409 = already exists (both are OK)
-                if response.status_code in [200, 409]:
-                    response.success()
+            # Let failures be reported as failures
+            self.client.post("/register", json=user_data, name="/register")
         
         # Try to login with Basic Auth
         credentials = base64.b64encode(f"{username}:{password}".encode()).decode()
-        with self.client.get(
+        response = self.client.get(
             "/login",
             headers={"Authorization": f"Basic {credentials}"},
-            name="/login",
-            catch_response=True
-        ) as response:
-            if response.status_code == 200:
-                self.logged_in = True
-                self.username = username
-                response.success()
-            elif response.status_code == 401:
-                # 401 is expected for non-existent users, don't count as failure
-                response.success()
+            name="/login"
+        )
+        
+        if response.status_code == 200:
+            self.logged_in = True
+            self.username = username
     
     @task(15)
     def shopping_cart_operations(self):
@@ -148,12 +142,8 @@ class SockShopUser(TaskSet):
             )
         
         # Sometimes delete cart (20% chance - simulates clearing cart)
-        # Note: 404 response is normal when cart doesn't exist
         if random.random() < 0.2:
-            with self.client.delete("/cart", name="/cart DELETE", catch_response=True) as response:
-                if response.status_code in [202, 404]:
-                    # 202 = deleted, 404 = didn't exist (both are OK)
-                    response.success()
+            self.client.delete("/cart", name="/cart DELETE")
     
     @task(5)
     def place_order(self):
@@ -199,13 +189,11 @@ class SockShopUser(TaskSet):
             "firstName": f"First{username[-4:]}",
             "lastName": f"Last{username[-4:]}"
         }
-        with self.client.post("/register", json=user_data, name="/register", catch_response=True) as response:
-            # 200 = success, 409 = user already exists (both OK)
-            if response.status_code in [200, 409]:
-                response.success()
-            else:
-                # Registration failed, skip order
-                return
+        register_response = self.client.post("/register", json=user_data, name="/register")
+        
+        # If registration failed with something other than 409 (conflict), skip order
+        if register_response.status_code not in [200, 409]:
+            return
         
         # Login
         login_response = self.client.get(
@@ -226,14 +214,16 @@ class SockShopUser(TaskSet):
             "postcode": "12345",
             "country": "USA"
         }
-        with self.client.post(
+        address_response = self.client.post(
             f"/customers/{username}/addresses",
             json=address_data,
-            name="/customers/[id]/addresses POST",
-            catch_response=True
-        ) as response:
-            # Mark as success regardless of status (idempotent operation)
-            response.success()
+            name="/customers/[id]/addresses POST"
+        )
+        
+        # Check if address was created successfully
+        if address_response.status_code not in [200, 201]:
+            # Address creation failed, skip order
+            return
         
         # 7. Create card for the user (required for orders)
         card_data = {
@@ -241,20 +231,19 @@ class SockShopUser(TaskSet):
             "expires": "12/25",
             "ccv": "123"
         }
-        with self.client.post(
+        card_response = self.client.post(
             f"/customers/{username}/cards",
             json=card_data,
-            name="/customers/[id]/cards POST",
-            catch_response=True
-        ) as response:
-            # Mark as success regardless of status (idempotent operation)
-            response.success()
+            name="/customers/[id]/cards POST"
+        )
+        
+        # Check if card was created successfully
+        if card_response.status_code not in [200, 201]:
+            # Card creation failed, skip order
+            return
         
         # 8. Clear cart
-        with self.client.delete("/cart", name="/cart DELETE", catch_response=True) as response:
-            # 404 or 202 both OK
-            if response.status_code in [202, 404]:
-                response.success()
+        self.client.delete("/cart", name="/cart DELETE")
         
         # 9. Add item to cart
         item_data = {
