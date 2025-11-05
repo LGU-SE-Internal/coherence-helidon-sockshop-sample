@@ -1,0 +1,251 @@
+# Example custom values for Sock Shop Helm chart
+# Copy and modify this file to create your own custom deployment
+
+# Example 1: Production deployment with custom registry and scaled services
+# Usage: helm install sockshop ./helm/sockshop -n sockshop -f values-production.yaml
+---
+# values-production.yaml
+global:
+  imageRegistry: "my-registry.example.com"
+  imagePullPolicy: Always
+
+frontend:
+  replicas: 2
+  service:
+    type: LoadBalancer
+
+loadgen:
+  enabled: false  # Disable load generator in production
+
+carts:
+  replicas: 3
+catalog:
+  replicas: 3
+orders:
+  replicas: 3
+payment:
+  replicas: 3
+shipping:
+  replicas: 3
+users:
+  replicas: 3
+
+---
+# Example 2: Development environment with load generator
+# Usage: helm install sockshop ./helm/sockshop -n sockshop -f values-dev.yaml
+---
+# values-dev.yaml
+global:
+  imageRegistry: "localhost:5000"
+
+loadgen:
+  enabled: true
+  replicas: 1
+  load:
+    users: 10
+    spawnRate: 2
+    runTime: ""  # Continuous load generation
+
+# Single replica for all services to save resources
+carts:
+  replicas: 1
+catalog:
+  replicas: 1
+orders:
+  replicas: 1
+payment:
+  replicas: 1
+shipping:
+  replicas: 1
+users:
+  replicas: 1
+
+---
+# Example 3: Testing environment with heavy load
+# Usage: helm install sockshop ./helm/sockshop -n sockshop -f values-testing.yaml
+---
+# values-testing.yaml
+loadgen:
+  enabled: true
+  load:
+    users: 200
+    spawnRate: 20
+    runTime: "30m"
+    targetHost: "http://front-end.sockshop.svc.cluster.local"
+
+carts:
+  replicas: 2
+catalog:
+  replicas: 2
+orders:
+  replicas: 2
+payment:
+  replicas: 2
+shipping:
+  replicas: 2
+users:
+  replicas: 2
+
+---
+# Example 4: Minimal deployment (backend only)
+# Usage: helm install sockshop ./helm/sockshop -n sockshop -f values-minimal.yaml
+---
+# values-minimal.yaml
+frontend:
+  enabled: false
+
+loadgen:
+  enabled: false
+
+# All backend services enabled with single replica
+carts:
+  replicas: 1
+catalog:
+  replicas: 1
+orders:
+  replicas: 1
+payment:
+  replicas: 1
+shipping:
+  replicas: 1
+users:
+  replicas: 1
+
+---
+# Example 5: Custom image tags for canary deployment
+# Usage: helm install sockshop ./helm/sockshop -n sockshop -f values-canary.yaml
+---
+# values-canary.yaml
+global:
+  imageRegistry: "10.10.10.240/library"
+
+# Deploy new version for specific services
+carts:
+  image:
+    tag: "2.4.0-beta"
+  replicas: 1
+
+# Keep old version for other services
+catalog:
+  image:
+    tag: "2.3.3"
+orders:
+  image:
+    tag: "2.3.3"
+payment:
+  image:
+    tag: "2.3.3"
+shipping:
+  image:
+    tag: "2.3.3"
+users:
+  image:
+    tag: "2.3.3"
+
+---
+# Example 6: Custom resources for high-performance deployment
+# Usage: helm install sockshop ./helm/sockshop -n sockshop -f values-highperf.yaml
+---
+# values-highperf.yaml
+coherence:
+  jvm:
+    memory:
+      heapSize: 4g  # Increase heap size for better performance
+
+frontend:
+  replicas: 3
+  resources:
+    requests:
+      cpu: 200m
+      memory: 800Mi
+    limits:
+      cpu: 2000m
+      memory: 800Mi
+
+loadgen:
+  enabled: true
+  load:
+    users: 500
+    spawnRate: 50
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "500m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
+
+carts:
+  replicas: 5
+catalog:
+  replicas: 5
+orders:
+  replicas: 5
+payment:
+  replicas: 5
+shipping:
+  replicas: 5
+users:
+  replicas: 5
+
+---
+# Example 7: Custom load generator scenarios
+# Usage: helm install sockshop ./helm/sockshop -n sockshop -f values-custom-load.yaml
+---
+# values-custom-load.yaml
+loadgen:
+  enabled: true
+  load:
+    users: 100
+    spawnRate: 10
+    runTime: "1h"
+  config:
+    scenarios:
+      light:
+        users: 10
+        spawn_rate: 2
+        run_time: "5m"
+        description: "Light load scenario"
+      custom_peak:
+        users: 300
+        spawn_rate: 30
+        run_time: "20m"
+        description: "Custom peak hour load"
+      black_friday:
+        users: 1000
+        spawn_rate: 100
+        run_time: "2h"
+        description: "Black Friday sale simulation"
+    api_weights:
+      browse_catalogue: 50      # More browsing during sales
+      view_product_details: 25
+      user_login_flow: 5
+      shopping_cart: 15
+      place_order: 5            # Same conversion rate
+
+---
+# Example 8: Disable specific services
+# Usage: helm install sockshop ./helm/sockshop -n sockshop -f values-partial.yaml
+---
+# values-partial.yaml
+# Deploy only core services
+frontend:
+  enabled: true
+
+loadgen:
+  enabled: false
+
+carts:
+  enabled: true
+catalog:
+  enabled: true
+orders:
+  enabled: true
+
+# Disable optional services
+payment:
+  enabled: false
+shipping:
+  enabled: false
+users:
+  enabled: false
