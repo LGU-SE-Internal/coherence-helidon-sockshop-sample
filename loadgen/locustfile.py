@@ -159,8 +159,7 @@ class SockShopUser(TaskSet):
         """
         Complete purchase flow (5% of requests)
         Simulates the full user journey from browsing to order placement
-        Note: This calls the frontend /orders endpoint which internally handles
-        customer/address/card creation via the frontend logic
+        Matches the original sockshop load test pattern exactly
         """
         if not self.catalogue:
             return
@@ -176,23 +175,14 @@ class SockShopUser(TaskSet):
         # 1. Visit home page
         self.client.get("/", name="/")
         
-        # 2. Browse catalogue
-        self.client.get("/catalogue", name="/catalogue")
-        
-        # 3. View category page
-        self.client.get("/category.html", name="/category.html")
-        
-        # 4. View product detail
-        self.client.get(f"/detail.html?id={item_id}", name="/detail.html?id=[id]")
-        
-        # 5. Login/Register to have a user account (required for orders)
-        # Use smaller user pool to increase reuse
+        # 2. Login/Register to have a user account (required for orders)
+        # Use smaller user pool to increase reuse and reduce conflicts
         user_num = random.randint(1, self.user_pool_size)
         username = f"user{user_num}"
         password = "password"
         credentials = base64.b64encode(f"{username}:{password}".encode()).decode()
         
-        # Try login first
+        # Try login first (most users should already exist)
         login_response = self.client.get(
             "/login",
             headers={"Authorization": f"Basic {credentials}"},
@@ -210,7 +200,7 @@ class SockShopUser(TaskSet):
             }
             register_response = self.client.post("/register", json=user_data, name="/register")
             
-            # If registration failed, skip order
+            # If registration failed (not 200), skip order
             if register_response.status_code != 200:
                 return
             
@@ -221,60 +211,41 @@ class SockShopUser(TaskSet):
                 name="/login"
             )
         
-        # If login still failed, skip order
+        # If login failed, skip order
         if login_response.status_code != 200:
             return
         
-        # 6. Create address for the user (required for orders)
-        address_data = {
-            "number": "123",
-            "street": "Main St",
-            "city": "Springfield", 
-            "postcode": "12345",
-            "country": "USA"
-        }
-        address_response = self.client.post(
-            f"/customers/{username}/addresses",
-            json=address_data,
-            name="/customers/[id]/addresses POST"
-        )
+        # Login succeeded - session is now authenticated via cookies
+        # The Locust client automatically maintains session cookies
         
-        # Check if address was created successfully
-        if address_response.status_code not in [200, 201]:
-            # Address creation failed, skip order
-            return
+        # 3. View category page
+        self.client.get("/category.html", name="/category.html")
         
-        # 7. Create card for the user (required for orders)
-        card_data = {
-            "longNum": "1234567890123456",
-            "expires": "12/25",
-            "ccv": "123"
-        }
-        card_response = self.client.post(
-            f"/customers/{username}/cards",
-            json=card_data,
-            name="/customers/[id]/cards POST"
-        )
+        # 4. View product detail
+        self.client.get(f"/detail.html?id={item_id}", name="/detail.html?id=[id]")
         
-        # Check if card was created successfully
-        if card_response.status_code not in [200, 201]:
-            # Card creation failed, skip order
-            return
-        
-        # 8. Clear cart
+        # 5. Clear cart (404 is OK if cart doesn't exist)
         self.client.delete("/cart", name="/cart DELETE")
         
-        # 9. Add item to cart
+        # 6. Add item to cart
         item_data = {
             "id": item_id,
             "quantity": 1
         }
-        self.client.post("/cart", json=item_data, name="/cart POST")
+        cart_response = self.client.post("/cart", json=item_data, name="/cart POST")
         
-        # 10. View basket
+        # If adding to cart failed, skip order
+        if cart_response.status_code not in [200, 201]:
+            return
+        
+        # 7. View basket
         self.client.get("/basket.html", name="/basket.html")
         
-        # 11. Place order (frontend handles the complex order creation)
+        # 8. Place order
+        # The frontend /orders endpoint handles everything:
+        # - Gets customer info from authenticated session
+        # - Creates address/card if needed via frontend logic
+        # - Creates the order via backend API
         self.client.post("/orders", name="/orders")
 
 
