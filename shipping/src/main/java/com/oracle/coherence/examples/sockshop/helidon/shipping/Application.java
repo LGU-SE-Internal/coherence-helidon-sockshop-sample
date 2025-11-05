@@ -26,13 +26,13 @@ public class Application {
 		SLF4JBridgeHandler.removeHandlersForRootLogger();
 		SLF4JBridgeHandler.install();
 		
-		// Start the server - this will initialize Helidon's OpenTelemetry with traces
-		Server server = Server.create();
-		server.start();
-		
-		// NOW initialize OpenTelemetry logs after Helidon has set up GlobalOpenTelemetry
-		// This ensures the span context is available when logs are emitted
+		// Initialize OpenTelemetry logs BEFORE server starts
+		// This must happen before Logback creates appenders from logback.xml
 		initializeOpenTelemetryLogs();
+		
+		// Start the server - Helidon will initialize GlobalOpenTelemetry with traces
+		// The span context will be available via Context API when logs are emitted
+		Server.create().start();
 	}
 	
 	private static void initializeOpenTelemetryLogs() {
