@@ -151,8 +151,11 @@ class SockShopUser(TaskSet):
             )
         
         # Sometimes delete cart (20% chance - simulates clearing cart)
+        # First check if cart exists to avoid 404 errors
         if random.random() < 0.2:
-            self.client.delete("/cart", name="/cart DELETE")
+            cart_check = self.client.get("/cart", name="/cart GET")
+            if cart_check.status_code == 200:
+                self.client.delete("/cart", name="/cart DELETE")
     
     @task(5)
     def place_order(self):
@@ -252,8 +255,11 @@ class SockShopUser(TaskSet):
         # 6. View product detail
         self.client.get(f"/detail.html?id={item_id}", name="/detail.html?id=[id]")
         
-        # 7. Clear cart (404 is OK if cart doesn't exist)
-        self.client.delete("/cart", name="/cart DELETE")
+        # 7. Clear cart only if cart exists (avoids 404 errors)
+        # Check cart first - if cart exists, then delete it
+        cart_check = self.client.get("/cart", name="/cart GET")
+        if cart_check.status_code == 200:
+            self.client.delete("/cart", name="/cart DELETE")
         
         # 8. Add item to cart
         item_data = {
