@@ -218,16 +218,44 @@ class SockShopUser(TaskSet):
         # Login succeeded - session is now authenticated via cookies
         # The Locust client automatically maintains session cookies
         
-        # 3. View category page
+        # 3. Create address (required for order)
+        address_data = {
+            "number": "123",
+            "street": "Main Street",
+            "city": "Springfield",
+            "postcode": "12345",
+            "country": "USA",
+            "userID": username
+        }
+        address_response = self.client.post("/addresses", json=address_data, name="/addresses POST")
+        
+        # If address creation failed, skip order
+        if address_response.status_code not in [200, 201]:
+            return
+        
+        # 4. Create card (required for order)
+        card_data = {
+            "longNum": "4111111111111111",
+            "expires": "12/25",
+            "ccv": "123",
+            "userID": username
+        }
+        card_response = self.client.post("/cards", json=card_data, name="/cards POST")
+        
+        # If card creation failed, skip order
+        if card_response.status_code not in [200, 201]:
+            return
+        
+        # 5. View category page
         self.client.get("/category.html", name="/category.html")
         
-        # 4. View product detail
+        # 6. View product detail
         self.client.get(f"/detail.html?id={item_id}", name="/detail.html?id=[id]")
         
-        # 5. Clear cart (404 is OK if cart doesn't exist)
+        # 7. Clear cart (404 is OK if cart doesn't exist)
         self.client.delete("/cart", name="/cart DELETE")
         
-        # 6. Add item to cart
+        # 8. Add item to cart
         item_data = {
             "id": item_id,
             "quantity": 1
@@ -238,14 +266,11 @@ class SockShopUser(TaskSet):
         if cart_response.status_code not in [200, 201]:
             return
         
-        # 7. View basket
+        # 9. View basket
         self.client.get("/basket.html", name="/basket.html")
         
-        # 8. Place order
-        # The frontend /orders endpoint handles everything:
-        # - Gets customer info from authenticated session
-        # - Creates address/card if needed via frontend logic
-        # - Creates the order via backend API
+        # 10. Place order
+        # Now that address and card exist, the order should succeed
         self.client.post("/orders", name="/orders")
 
 
