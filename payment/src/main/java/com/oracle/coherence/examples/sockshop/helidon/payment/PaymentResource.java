@@ -7,6 +7,8 @@
 
 package com.oracle.coherence.examples.sockshop.helidon.payment;
 
+import java.util.logging.Logger;
+
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Path;
@@ -18,6 +20,8 @@ import jakarta.ws.rs.core.Response;
 @ApplicationScoped
 @Path("/payments")
 public class PaymentResource implements PaymentApi {
+    private static final Logger LOGGER = Logger.getLogger(PaymentResource.class.getName());
+
     /**
      * Payment repository to use.
      */
@@ -32,6 +36,7 @@ public class PaymentResource implements PaymentApi {
 
     @Override
     public Response getOrderAuthorizations(String orderId) {
+        LOGGER.info("Getting authorizations for order: " + orderId);
         return Response.ok(payments.findAuthorizationsByOrder(orderId)).build();
     }
 
@@ -39,18 +44,32 @@ public class PaymentResource implements PaymentApi {
     public Authorization authorize(PaymentRequest paymentRequest) {
         String firstName = paymentRequest.getCustomer().getFirstName();
         String lastName  = paymentRequest.getCustomer().getLastName();
+        String orderId = paymentRequest.getOrderId();
 
-        Authorization auth = paymentService.authorize(
-                paymentRequest.getOrderId(),
-                firstName,
-                lastName,
-                paymentRequest.getCard(),
-                paymentRequest.getAddress(),
-                paymentRequest.getAmount());
+        LOGGER.info("Authorizing payment for order: " + orderId + ", customer: " + firstName + " " + lastName);
 
-        payments.saveAuthorization(auth);
+        try {
+            Authorization auth = paymentService.authorize(
+                    orderId,
+                    firstName,
+                    lastName,
+                    paymentRequest.getCard(),
+                    paymentRequest.getAddress(),
+                    paymentRequest.getAmount());
 
-        return auth;
+            payments.saveAuthorization(auth);
+
+            if (!auth.isAuthorised()) {
+                LOGGER.warning("Payment declined for order: " + orderId + ", reason: " + auth.getMessage());
+            } else {
+                LOGGER.info("Payment authorized for order: " + orderId);
+            }
+
+            return auth;
+        } catch (Exception e) {
+            LOGGER.severe("Error authorizing payment for order: " + orderId + ", error: " + e.getMessage());
+            throw e;
+        }
     }
 
 

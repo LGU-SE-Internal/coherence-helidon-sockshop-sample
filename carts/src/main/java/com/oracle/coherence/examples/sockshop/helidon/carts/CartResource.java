@@ -7,6 +7,8 @@
 
 package com.oracle.coherence.examples.sockshop.helidon.carts;
 
+import java.util.logging.Logger;
+
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Path;
@@ -18,25 +20,36 @@ import jakarta.ws.rs.core.Response;
 @ApplicationScoped
 @Path("/carts")
 public class CartResource implements CartApi {
+    private static final Logger LOGGER = Logger.getLogger(CartResource.class.getName());
 
     @Inject
     private CartRepository carts;
 
     @Override
     public Cart getCart(String customerId) {
+        LOGGER.info("Getting cart for customer: " + customerId);
         return carts.getOrCreateCart(customerId);
     }
 
     @Override
     public Response deleteCart(String customerId) {
-        return carts.deleteCart(customerId) ?
+        LOGGER.info("Deleting cart for customer: " + customerId);
+        boolean deleted = carts.deleteCart(customerId);
+        if (!deleted) {
+            LOGGER.warning("Cart not found for customer: " + customerId);
+        }
+        return deleted ?
                 Response.accepted().build() :
                 Response.status(Response.Status.NOT_FOUND).build();
     }
 
     @Override
     public Response mergeCarts(String customerId, String sessionId) {
+        LOGGER.info("Merging carts for customer: " + customerId + ", session: " + sessionId);
         boolean fMerged = carts.mergeCarts(customerId, sessionId);
+        if (!fMerged) {
+            LOGGER.warning("Failed to merge carts for customer: " + customerId);
+        }
         return fMerged
                 ? Response.accepted().build()
                 : Response.status(Response.Status.NOT_FOUND).build();
@@ -44,6 +57,7 @@ public class CartResource implements CartApi {
 
     @Override
     public ItemsApi getItems(String customerId) {
+        LOGGER.info("Getting items for customer: " + customerId);
         return new ItemsResource(carts, customerId);
     }
 }

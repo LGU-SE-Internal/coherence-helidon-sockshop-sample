@@ -21,7 +21,7 @@
     <groupId>com.oracle.coherence.examples.sockshop.helidon</groupId>
     <artifactId>payment</artifactId>
     <packaging>jar</packaging>
-    <version>2.3.3</version>
+    <version>2.3.10</version>
 
     <properties>
         <mainClass>com.oracle.coherence.examples.sockshop.helidon.payment.Application</mainClass>
@@ -170,10 +170,42 @@
         </dependency>
 
         <!-- Logging -->
+        <!-- SLF4J / Logback for logging -->
         <dependency>
-            <groupId>io.helidon.logging</groupId>
-            <artifactId>helidon-logging-jul</artifactId>
-            <scope>runtime</scope>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>2.0.17</version>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>1.5.20</version>
+        </dependency>
+        <!-- JUL to SLF4J bridge -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>jul-to-slf4j</artifactId>
+            <version>2.0.17</version>
+        </dependency>
+        <!-- OpenTelemetry log appender for Logback -->
+        <dependency>
+            <groupId>io.opentelemetry.instrumentation</groupId>
+            <artifactId>opentelemetry-logback-appender-1.0</artifactId>
+            <version>2.11.0-alpha</version>
+        </dependency>
+        <!-- OpenTelemetry SDK for logs -->
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-sdk</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry.semconv</groupId>
+            <artifactId>opentelemetry-semconv</artifactId>
+            <version>1.28.0-alpha</version>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-sdk-logs</artifactId>
         </dependency>
 
         <!-- test dependencies -->

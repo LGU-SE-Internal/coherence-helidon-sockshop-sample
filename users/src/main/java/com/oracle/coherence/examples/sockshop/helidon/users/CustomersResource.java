@@ -7,6 +7,8 @@
 
 package com.oracle.coherence.examples.sockshop.helidon.users;
 
+import java.util.logging.Logger;
+
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Path;
@@ -18,34 +20,43 @@ import static com.oracle.coherence.examples.sockshop.helidon.users.JsonHelpers.o
 @ApplicationScoped
 @Path("/customers")
 public class CustomersResource implements CustomerApi {
+    private static final Logger LOGGER = Logger.getLogger(CustomersResource.class.getName());
 
     @Inject
     private UserRepository users;
 
     @Override
     public Response getAllCustomers() {
+        LOGGER.info("Getting all customers");
         return Response.ok(embed("customer", users.getAllUsers())).build();
     }
 
     @Override
     public Response getCustomer(String id) {
+        LOGGER.info("Getting customer: " + id);
         return Response.ok(users.getOrCreate(id)).build();
     }
 
     @Override
     public Response deleteCustomer(String id) {
+        LOGGER.info("Deleting customer: " + id);
         User prev = users.removeUser(id);
+        if (prev == null) {
+            LOGGER.warning("Customer not found for deletion: " + id);
+        }
         return Response.ok(obj().add("status", prev != null).build()).build();
     }
 
     @Override
     public Response getCustomerCards(String id) {
+        LOGGER.info("Getting cards for customer: " + id);
         User user = users.getUser(id);
         return Response.ok(embed("card", user.getCards().stream().map(Card::mask).toArray())).build();
     }
 
     @Override
     public Response getCustomerAddresses(String id) {
+        LOGGER.info("Getting addresses for customer: " + id);
         User user = users.getUser(id);
         return Response.ok(embed("address", user.getAddresses())).build();
     }

@@ -48,22 +48,25 @@ public class UserResource implements UserApi {
     @Override
     public Response login(String auth) {
         if (!auth.startsWith(BASIC_PREFIX)) {
+            LOGGER.warning("Login attempt with missing Basic authentication header");
             return fail("Basic authentication header is missing");
         }
         String  b64 = auth.substring(BASIC_PREFIX.length());
         String  usernameAndPassword = new String(Base64.getDecoder().decode(b64), StandardCharsets.UTF_8);
         Matcher matcher = CREDENTIAL_PATTERN.matcher(usernameAndPassword);
         if (!matcher.matches()) {
-            LOGGER.finest(() -> "Basic authentication header with invalid content: " + usernameAndPassword);
+            LOGGER.warning("Basic authentication header with invalid content: " + usernameAndPassword);
             return fail("Basic authentication header with invalid content");
         }
 
         final String username = matcher.group(1);
         final String password = matcher.group(2);
 
+        LOGGER.info("Login attempt for user: " + username);
         boolean fAuth = users.authenticate(username, password);
 
         if (fAuth) {
+            LOGGER.info("User logged in successfully: " + username);
             JsonObject entity = obj()
                     .add("user",
                          obj().add("id", username))
@@ -71,17 +74,22 @@ public class UserResource implements UserApi {
             return Response.ok(entity).build();
         }
         else {
+            LOGGER.warning("Failed login attempt for user: " + username);
             return fail("Invalid username or password");
         }
     }
 
     @Override
     public Response register(User user) {
+        String username = user.getUsername();
+        LOGGER.info("Registering new user: " + username);
         User prev = users.register(user);
         if (prev != null) {
+            LOGGER.warning("Registration failed - user already exists: " + username);
             return Response.status(CONFLICT).entity("User with that ID already exists").build();
         }
-        return Response.ok(obj().add("id", user.getUsername()).build()).build();
+        LOGGER.info("User registered successfully: " + username);
+        return Response.ok(obj().add("id", username).build()).build();
     }
 
     // ---- helpers ---------------------------------------------------------
