@@ -5,6 +5,10 @@
 # https://oss.oracle.com/licenses/upl.
 #
 grpc:
+  server:
+    # Enable tracing for gRPC server
+    tracing:
+      enabled: true
   client:
     channels:
       - name: "default"

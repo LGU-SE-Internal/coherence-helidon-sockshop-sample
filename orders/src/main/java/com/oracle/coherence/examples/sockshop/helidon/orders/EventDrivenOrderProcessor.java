@@ -8,6 +8,8 @@
 package com.oracle.coherence.examples.sockshop.helidon.orders;
 
 import io.helidon.grpc.api.Grpc;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.context.Context;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.ObservesAsync;
@@ -144,6 +146,14 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
 
     void onOrderCreated(@ObservesAsync @Inserted @Updated @MapName("orders") EntryEvent<String, Order> event) {
         Order order = event.getValue();
+        
+        // Create a new span for async event processing to maintain trace continuity
+        Span span = Span.current();
+        String spanName = "EventDrivenOrderProcessor.onOrderCreated[" + order.getStatus() + "]";
+        
+        // Add span information for debugging
+        span.setAttribute("orderId", order.getOrderId());
+        span.setAttribute("orderStatus", order.getStatus().toString());
 
         switch (order.getStatus()) {
         case CREATED:
