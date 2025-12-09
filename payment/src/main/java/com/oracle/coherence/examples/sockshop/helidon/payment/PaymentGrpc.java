@@ -8,7 +8,10 @@
 package com.oracle.coherence.examples.sockshop.helidon.payment;
 
 import io.helidon.grpc.api.Grpc;
-import io.opentelemetry.instrumentation.annotations.WithSpan;
+import io.opentelemetry.api.GlobalOpenTelemetry;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.context.Scope;
 
 import jakarta.enterprise.context.ApplicationScoped;
 
@@ -37,29 +40,53 @@ public class PaymentGrpc {
     @Inject
     private PaymentService paymentService;
 
+    private static final Tracer tracer = GlobalOpenTelemetry.getTracer("PaymentGrpc");
+
     @Grpc.Unary
-    @WithSpan
     public Collection<? extends Authorization> getOrderAuthorizations(String orderId) {
-        return payments.findAuthorizationsByOrder(orderId);
+        Span span = tracer.spanBuilder("PaymentGrpc.getOrderAuthorizations")
+                .setAttribute("orderId", orderId)
+                .startSpan();
+        try (Scope scope = span.makeCurrent()) {
+            return payments.findAuthorizationsByOrder(orderId);
+        } catch (Exception e) {
+            span.recordException(e);
+            throw e;
+        } finally {
+            span.end();
+        }
     }
 
     @Grpc.Unary
     @Counted
-    @WithSpan
     public Authorization authorize(PaymentRequest paymentRequest) {
         String firstName = paymentRequest.getCustomer().getFirstName();
         String lastName  = paymentRequest.getCustomer().getLastName();
+        String orderId = paymentRequest.getOrderId();
 
-        Authorization auth = paymentService.authorize(
-                paymentRequest.getOrderId(),
-                firstName,
-                lastName,
-                paymentRequest.getCard(),
-                paymentRequest.getAddress(),
-                paymentRequest.getAmount());
+        Span span = tracer.spanBuilder("PaymentGrpc.authorize")
+                .setAttribute("orderId", orderId)
+                .setAttribute("customer.firstName", firstName)
+                .setAttribute("customer.lastName", lastName)
+                .startSpan();
+        try (Scope scope = span.makeCurrent()) {
+            Authorization auth = paymentService.authorize(
+                    orderId,
+                    firstName,
+                    lastName,
+                    paymentRequest.getCard(),
+                    paymentRequest.getAddress(),
+                    paymentRequest.getAmount());
 
-        payments.saveAuthorization(auth);
+            payments.saveAuthorization(auth);
 
-        return auth;
+            span.setAttribute("authorized", auth.isAuthorised());
+            return auth;
+        } catch (Exception e) {
+            span.recordException(e);
+            throw e;
+        } finally {
+            span.end();
+        }
     }
 }
