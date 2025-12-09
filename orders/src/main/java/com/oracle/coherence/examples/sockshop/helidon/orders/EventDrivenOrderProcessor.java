@@ -147,11 +147,8 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
     void onOrderCreated(@ObservesAsync @Inserted @Updated @MapName("orders") EntryEvent<String, Order> event) {
         Order order = event.getValue();
         
-        // Create a new span for async event processing to maintain trace continuity
+        // Add span information for debugging async event processing
         Span span = Span.current();
-        String spanName = "EventDrivenOrderProcessor.onOrderCreated[" + order.getStatus() + "]";
-        
-        // Add span information for debugging
         span.setAttribute("orderId", order.getOrderId());
         span.setAttribute("orderStatus", order.getStatus().toString());
 
