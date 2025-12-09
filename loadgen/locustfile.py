@@ -3,6 +3,12 @@ Load Generator for Coherence Helidon Sock Shop
 
 This load generator simulates realistic e-commerce user behavior with configurable
 load patterns and API call ratios. Based on the original sockshop load test pattern.
+
+In addition to simulating front-end user behavior, this load generator also directly
+tests payment and shipping services to ensure they are properly exercised and traced.
+This is important because payment and shipping services are typically called internally
+by the orders service in an event-driven manner, which may not always generate traces
+visible to the tracing backend.
 """
 
 import base64
@@ -278,6 +284,73 @@ class SockShopUser(TaskSet):
         # 10. Place order
         # Now that address and card exist, the order should succeed
         self.client.post("/orders", name="/orders")
+    
+    @task(3)
+    def test_payment_service(self):
+        """
+        Direct payment service testing (3% of requests)
+        Tests payment authorization endpoint directly to ensure it's traced
+        This simulates what the orders service does internally
+        """
+        # Generate test payment request
+        order_id = f"test-order-{random.randint(1, 100000)}"
+        
+        payment_request = {
+            "orderId": order_id,
+            "customer": {
+                "firstName": "Test",
+                "lastName": "Customer"
+            },
+            "address": {
+                "number": "123",
+                "street": "Main Street",
+                "city": "Springfield",
+                "postcode": "12345",
+                "country": "USA"
+            },
+            "card": {
+                "longNum": "4111111111111111",
+                "expires": "12/25",
+                "ccv": "123"
+            },
+            "amount": 99.99
+        }
+        
+        # Call payment authorization endpoint
+        self.client.post(
+            "/payments",
+            json=payment_request,
+            name="/payments POST (authorize)"
+        )
+    
+    @task(3)
+    def test_shipping_service(self):
+        """
+        Direct shipping service testing (3% of requests)
+        Tests shipping endpoint directly to ensure it's traced
+        This simulates what the orders service does internally
+        """
+        # Generate test shipping request
+        order_id = f"test-order-{random.randint(1, 100000)}"
+        
+        shipping_request = {
+            "orderId": order_id,
+            "address": {
+                "number": "456",
+                "street": "Oak Avenue",
+                "city": "Portland",
+                "postcode": "97201",
+                "country": "USA"
+            },
+            "itemCount": random.randint(1, 5)
+        }
+        
+        # Call shipping endpoint to create shipment
+        self.client.post(
+            "/shipping",
+            json=shipping_request,
+            name="/shipping POST (create shipment)"
+        )
 
 
 class WebsiteUser(HttpUser):

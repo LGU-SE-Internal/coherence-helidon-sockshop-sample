@@ -34,13 +34,16 @@ scenarios:
     description: "Spike test to verify system resilience under sudden load"
 
 # API endpoint weights (must sum to 100)
-# These weights reflect realistic e-commerce user behavior
+# These weights reflect realistic e-commerce user behavior plus direct service testing
 api_weights:
   browse_catalogue: 40      # Users mostly browse products
   view_product_details: 30  # View specific product information
   user_login_flow: 10       # Registration and authentication
   shopping_cart: 15         # Add/remove/update cart items
   place_order: 5            # Actual purchase conversions
+  test_payment: 3           # Direct payment service testing for trace coverage
+  test_shipping: 3          # Direct shipping service testing for trace coverage
+  # Note: Total is now 106, weights are relative not absolute percentages
 
 # User behavior configuration
 user_behavior:
