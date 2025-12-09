@@ -187,7 +187,7 @@
             <artifactId>opentelemetry-logback-appender-1.0</artifactId>
             <version>2.11.0-alpha</version>
         </dependency>
-        <!-- OpenTelemetry MDC support for Logback - automatically populates trace_id and span_id in MDC -->
+        <!-- OpenTelemetry MDC support for Logback - automatically populates trace_id and span_id in MDC for console logging -->
         <dependency>
             <groupId>io.opentelemetry.instrumentation</groupId>
             <artifactId>opentelemetry-logback-mdc-1.0</artifactId>
