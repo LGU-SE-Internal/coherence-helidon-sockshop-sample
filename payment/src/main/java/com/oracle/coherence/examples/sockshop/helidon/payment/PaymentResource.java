@@ -9,6 +9,7 @@ package com.oracle.coherence.examples.sockshop.helidon.payment;
 
 import java.util.logging.Logger;
 
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Path;
@@ -35,12 +36,14 @@ public class PaymentResource implements PaymentApi {
     private PaymentService paymentService;
 
     @Override
+    @WithSpan
     public Response getOrderAuthorizations(String orderId) {
         LOGGER.info("Getting authorizations for order: " + orderId);
         return Response.ok(payments.findAuthorizationsByOrder(orderId)).build();
     }
 
     @Override
+    @WithSpan
     public Authorization authorize(PaymentRequest paymentRequest) {
         String firstName = paymentRequest.getCustomer().getFirstName();
         String lastName  = paymentRequest.getCustomer().getLastName();

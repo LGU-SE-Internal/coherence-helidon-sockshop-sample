@@ -15,6 +15,7 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.Path;
 
 import io.helidon.grpc.api.Grpc;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 
 import org.eclipse.microprofile.metrics.annotation.Timed;
 
@@ -37,6 +38,7 @@ public class ShippingResource implements ShippingApi {
 
     @Override
     @Grpc.Unary
+    @WithSpan
     public Shipment getShipmentByOrderId(String orderId) {
         LOGGER.info("Getting shipment for order: " + orderId);
         Shipment shipment = shipments.getShipment(orderId);
@@ -48,6 +50,7 @@ public class ShippingResource implements ShippingApi {
 
     @Override
     @Grpc.Unary
+    @WithSpan
     public Shipment ship(ShippingRequest req) {
         String orderId = req.getOrderId();
         int itemCount = req.getItemCount();

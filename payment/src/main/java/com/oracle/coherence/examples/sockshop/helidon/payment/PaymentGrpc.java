@@ -8,6 +8,7 @@
 package com.oracle.coherence.examples.sockshop.helidon.payment;
 
 import io.helidon.grpc.api.Grpc;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 
 import jakarta.enterprise.context.ApplicationScoped;
 
@@ -37,12 +38,14 @@ public class PaymentGrpc {
     private PaymentService paymentService;
 
     @Grpc.Unary
+    @WithSpan
     public Collection<? extends Authorization> getOrderAuthorizations(String orderId) {
         return payments.findAuthorizationsByOrder(orderId);
     }
 
     @Grpc.Unary
     @Counted
+    @WithSpan
     public Authorization authorize(PaymentRequest paymentRequest) {
         String firstName = paymentRequest.getCustomer().getFirstName();
         String lastName  = paymentRequest.getCustomer().getLastName();
