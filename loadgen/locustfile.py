@@ -317,11 +317,18 @@ class SockShopUser(TaskSet):
         }
         
         # Call payment authorization endpoint
-        self.client.post(
+        response = self.client.post(
             "/payments",
             json=payment_request,
             name="/payments POST (authorize)"
         )
+        
+        # If payment was created successfully, try to retrieve it
+        if response.status_code in [200, 201]:
+            self.client.get(
+                f"/payments/{order_id}",
+                name="/payments GET (by orderId)"
+            )
     
     @task(3)
     def test_shipping_service(self):
@@ -346,11 +353,18 @@ class SockShopUser(TaskSet):
         }
         
         # Call shipping endpoint to create shipment
-        self.client.post(
+        response = self.client.post(
             "/shipping",
             json=shipping_request,
             name="/shipping POST (create shipment)"
         )
+        
+        # If shipment was created successfully, try to retrieve it
+        if response.status_code in [200, 201]:
+            self.client.get(
+                f"/shipping/{order_id}",
+                name="/shipping GET (by orderId)"
+            )
 
 
 class WebsiteUser(HttpUser):

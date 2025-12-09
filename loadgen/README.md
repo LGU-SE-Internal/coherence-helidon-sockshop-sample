@@ -294,12 +294,14 @@ The load generator simulates the following user journey (based on original socks
 
 6. **Direct Payment Service Testing** (3% of requests)
    - Test payment authorization endpoint directly via `/payments` POST
+   - Retrieve payment authorization via `/payments/{orderId}` GET
    - Ensures payment service is exercised and traced
    - Simulates what orders service does internally
    - Provides independent verification of payment service health
 
 7. **Direct Shipping Service Testing** (3% of requests)
    - Test shipping endpoint directly via `/shipping` POST
+   - Retrieve shipment information via `/shipping/{orderId}` GET
    - Ensures shipping service is exercised and traced
    - Simulates what orders service does internally
    - Provides independent verification of shipping service health
