@@ -33,8 +33,9 @@ scenarios:
     run_time: "10m"
     description: "Spike test to verify system resilience under sudden load"
 
-# API endpoint weights (must sum to 100, but Locust normalizes proportionally)
+# API endpoint weights (Locust normalizes proportionally, so they don't need to sum to 100)
 # These weights reflect realistic e-commerce user behavior plus direct service testing
+# Current total: 40+30+10+15+5+3+3 = 106 (normalized to 100% by Locust)
 api_weights:
   browse_catalogue: 40      # Users mostly browse products
   view_product_details: 30  # View specific product information
@@ -43,7 +44,6 @@ api_weights:
   place_order: 5            # Actual purchase conversions
   test_payment: 3           # Direct payment service testing for trace coverage
   test_shipping: 3          # Direct shipping service testing for trace coverage
-  # Note: Locust normalizes these weights proportionally (total is 106 here)
 
 # User behavior configuration
 user_behavior:

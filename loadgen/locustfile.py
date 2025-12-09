@@ -37,6 +37,10 @@ class SockShopUser(TaskSet):
         response = self.client.get("/catalogue")
         if response.status_code == 200:
             self.catalogue = response.json()
+    
+    def _generate_test_order_id(self):
+        """Generate a unique test order ID"""
+        return f"test-order-{random.randint(1, 100000)}"
         
     @task(40)
     def browse_catalogue(self):
@@ -293,7 +297,7 @@ class SockShopUser(TaskSet):
         This simulates what the orders service does internally
         """
         # Generate test payment request
-        order_id = f"test-order-{random.randint(1, 100000)}"
+        order_id = self._generate_test_order_id()
         
         payment_request = {
             "orderId": order_id,
@@ -338,7 +342,7 @@ class SockShopUser(TaskSet):
         This simulates what the orders service does internally
         """
         # Generate test shipping request
-        order_id = f"test-order-{random.randint(1, 100000)}"
+        order_id = self._generate_test_order_id()
         
         shipping_request = {
             "orderId": order_id,
