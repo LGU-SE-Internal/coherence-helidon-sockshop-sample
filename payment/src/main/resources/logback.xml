@@ -1,15 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
-    <!-- Base console appender with trace context in pattern -->
-    <appender name="consoleBase" class="ch.qos.logback.core.ConsoleAppender">
+    <!-- TurboFilter to explicitly set trace_id and span_id in MDC from OpenTelemetry context -->
+    <!-- This ensures trace context is available even for async/deferred processing -->
+    <turboFilter class="com.oracle.coherence.examples.sockshop.helidon.payment.OpenTelemetryMdcTurboFilter"/>
+    
+    <!-- Console appender with trace context in pattern -->
+    <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>%d{yyyy.MM.dd HH:mm:ss} %-5level %logger{36} [%thread] traceId=%mdc{trace_id:-} spanId=%mdc{span_id:-} - %msg%n</pattern>
         </encoder>
-    </appender>
-    
-    <!-- Wrap console appender with OpenTelemetry MDC support for trace context -->
-    <appender name="console" class="io.opentelemetry.instrumentation.logback.mdc.v1_0.OpenTelemetryAppender">
-        <appender-ref ref="consoleBase"/>
     </appender>
     
     <!-- OpenTelemetry appender for sending logs to OTLP collector -->
