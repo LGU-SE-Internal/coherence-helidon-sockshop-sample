@@ -1,9 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
-    <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
+    <!-- Base console appender -->
+    <appender name="consoleBase" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%d{yyyy.MM.dd HH:mm:ss} %-5level %logger{36} [%thread] - %msg%n</pattern>
+            <pattern>%d{yyyy.MM.dd HH:mm:ss} %-5level %logger{36} [%thread] traceId=%mdc{trace_id:-} spanId=%mdc{span_id:-} - %msg%n</pattern>
         </encoder>
+    </appender>
+    
+    <!-- Wrap console appender with OpenTelemetry MDC support -->
+    <appender name="console" class="io.opentelemetry.instrumentation.logback.mdc.v1_0.OpenTelemetryAppender">
+        <appender-ref ref="consoleBase"/>
     </appender>
     
     <appender name="OpenTelemetry"
