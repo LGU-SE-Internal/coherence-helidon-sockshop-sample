@@ -10,9 +10,9 @@ package com.oracle.coherence.examples.sockshop.helidon.orders;
 import io.helidon.grpc.api.Grpc;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
+import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.api.GlobalOpenTelemetry;
-import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -188,6 +188,7 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
                 // do nothing, order is in a terminal state already
             }
         } catch (Exception e) {
+            asyncSpan.setStatus(StatusCode.ERROR, e.getMessage());
             asyncSpan.recordException(e);
             throw e;
         } finally {
