@@ -9,7 +9,11 @@ package com.oracle.coherence.examples.sockshop.helidon.orders;
 
 import io.helidon.grpc.api.Grpc;
 import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.SpanKind;
+import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.context.Context;
+import io.opentelemetry.context.Scope;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.ObservesAsync;
@@ -54,6 +58,11 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
     @Inject
     @Grpc.GrpcProxy
     protected PaymentClient paymentService;
+    
+    /**
+     * Tracer for manual span creation in async contexts
+     */
+    private static final Tracer tracer = GlobalOpenTelemetry.getTracer("EventDrivenOrderProcessor");
 
     // --- OrderProcessor interface -----------------------------------------
 
@@ -147,32 +156,42 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
     void onOrderCreated(@ObservesAsync @Inserted @Updated @MapName("orders") EntryEvent<String, Order> event) {
         Order order = event.getValue();
         
-        // Add span information for debugging async event processing
-        Span span = Span.current();
-        span.setAttribute("orderId", order.getOrderId());
-        span.setAttribute("orderStatus", order.getStatus().toString());
+        // Create a new root span for async processing since @ObservesAsync breaks trace context
+        // This ensures payment and shipping calls are properly traced
+        Span asyncSpan = tracer.spanBuilder("EventDrivenOrderProcessor.onOrderCreated")
+                .setSpanKind(SpanKind.INTERNAL)
+                .setAttribute("orderId", order.getOrderId())
+                .setAttribute("orderStatus", order.getStatus().toString())
+                .startSpan();
+        
+        try (Scope scope = asyncSpan.makeCurrent()) {
+            switch (order.getStatus()) {
+            case CREATED:
+                try {
+                    processPayment(order);
+                }
+                finally {
+                    saveOrder(order);
+                }
+                break;
 
-        switch (order.getStatus()) {
-        case CREATED:
-            try {
-                processPayment(order);
-            }
-            finally {
-                saveOrder(order);
-            }
-            break;
+            case PAID:
+                try {
+                    shipOrder(order);
+                }
+                finally {
+                    saveOrder(order);
+                }
+                break;
 
-        case PAID:
-            try {
-                shipOrder(order);
+            default:
+                // do nothing, order is in a terminal state already
             }
-            finally {
-                saveOrder(order);
-            }
-            break;
-
-        default:
-            // do nothing, order is in a terminal state already
+        } catch (Exception e) {
+            asyncSpan.recordException(e);
+            throw e;
+        } finally {
+            asyncSpan.end();
         }
     }
 }
