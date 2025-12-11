@@ -81,10 +81,7 @@ public class Application {
 		GlobalOpenTelemetry.set(openTelemetrySdk);
 		
 		// Add shutdown hook to flush traces and logs before application exits
-		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-			sdkTracerProvider.close();
-			sdkLoggerProvider.close();
-		}));
+		Runtime.getRuntime().addShutdownHook(new Thread(openTelemetrySdk::close));
 		
 		// Install the SDK in the Logback appender for log correlation
 		io.opentelemetry.instrumentation.logback.appender.v1_0.OpenTelemetryAppender.install(openTelemetrySdk);
