@@ -38,6 +38,7 @@
         <version.lib.hamcrest>3.0</version.lib.hamcrest>
         <version.lib.jandex>3.4.0</version.lib.jandex>
         <version.lib.otel.incubator>1.52.0-alpha</version.lib.otel.incubator>
+        <version.lib.otel.instrumentation>2.11.0-alpha</version.lib.otel.instrumentation>
         <version.lib.rest-assured>5.5.5</version.lib.rest-assured>
         <version.plugin.exec>3.5.1</version.plugin.exec>
         <version.plugin.surefire>3.2.5</version.plugin.surefire>
@@ -164,7 +165,7 @@
         <dependency>
             <groupId>io.opentelemetry.instrumentation</groupId>
             <artifactId>opentelemetry-grpc-1.6</artifactId>
-            <version>2.11.0-alpha</version>
+            <version>${version.lib.otel.instrumentation}</version>
         </dependency>
 
         <!-- Lombok -->
