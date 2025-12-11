@@ -160,6 +160,12 @@
             <artifactId>opentelemetry-api-incubator</artifactId>
             <version>${version.lib.otel.incubator}</version>
         </dependency>
+        <!-- OpenTelemetry gRPC instrumentation for server -->
+        <dependency>
+            <groupId>io.opentelemetry.instrumentation</groupId>
+            <artifactId>opentelemetry-grpc-1.6</artifactId>
+            <version>2.11.0-alpha</version>
+        </dependency>
 
         <!-- Lombok -->
         <dependency>
@@ -263,6 +269,19 @@
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${version.lib.lombok}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>io.smallrye</groupId>
                 <artifactId>jandex-maven-plugin</artifactId>
