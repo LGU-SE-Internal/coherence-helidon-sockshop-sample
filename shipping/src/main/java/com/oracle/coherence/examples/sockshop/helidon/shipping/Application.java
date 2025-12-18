@@ -26,9 +26,18 @@ public class Application {
 		SLF4JBridgeHandler.removeHandlersForRootLogger();
 		SLF4JBridgeHandler.install();
 		
-		// Initialize OpenTelemetry logs BEFORE server starts
-		// This must happen before Logback creates appenders from logback.xml
-		initializeOpenTelemetryLogs();
+		// Check if OTel Java agent is present
+		boolean agentPresent = Boolean.parseBoolean(
+				System.getProperty("otel.agent.present",
+						System.getenv().getOrDefault("OTEL_AGENT_PRESENT", "false")));
+		
+		// Only initialize manual OpenTelemetry logs if agent is NOT present
+		// When the agent is present, it handles all OpenTelemetry setup
+		if (!agentPresent) {
+			// Initialize OpenTelemetry logs BEFORE server starts
+			// This must happen before Logback creates appenders from logback.xml
+			initializeOpenTelemetryLogs();
+		}
 		
 		// Start the server - Helidon will initialize GlobalOpenTelemetry with traces
 		// The span context will be available via Context API when logs are emitted
