@@ -18,7 +18,7 @@ frontend:
   replicas: 1
   image:
     repository: ss-frontend
-    tag: "f578fa8"
+    tag: "node-22"
     pullPolicy: IfNotPresent
   service:
     type: NodePort
