@@ -92,8 +92,14 @@ public class Application {
 	}
 	
 	/**
-	 * Check if the OpenTelemetry Java agent is present by looking for the agent's classes
+	 * Check if the OpenTelemetry Java agent is present by looking for the agent's classes.
+	 * 
+	 * This uses the well-known AgentClassLoader class which is a stable part of the
+	 * OpenTelemetry Java agent's public contract. This class exists in all agent versions
+	 * and is specifically designed to be detectable by applications.
+	 * 
 	 * @return true if the agent is present, false otherwise
+	 * @see <a href="https://github.com/open-telemetry/opentelemetry-java-instrumentation">OpenTelemetry Java Instrumentation</a>
 	 */
 	private static boolean isAgentPresent() {
 		try {
