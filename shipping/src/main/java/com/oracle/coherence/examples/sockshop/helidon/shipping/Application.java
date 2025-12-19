@@ -32,7 +32,37 @@ public class Application {
 		
 		// Start the server - Helidon will initialize GlobalOpenTelemetry with traces
 		// The span context will be available via Context API when logs are emitted
-		Server.create().start();
+		Server server = Server.create();
+		server.start();
+		
+		// After server starts, if agent is present, install its GlobalOpenTelemetry in logback appender
+		// This ensures the agent's OpenTelemetry instance is fully initialized before we use it
+		if (isAgentPresent()) {
+			installAgentOpenTelemetryInLogback();
+		}
+	}
+	
+	/**
+	 * Install the agent's GlobalOpenTelemetry instance in the logback appender after server startup.
+	 * This is necessary because the agent initializes GlobalOpenTelemetry during server startup,
+	 * and the appender needs a fully initialized OpenTelemetry instance.
+	 */
+	private static void installAgentOpenTelemetryInLogback() {
+		try {
+			// Give the agent a moment to fully initialize
+			Thread.sleep(1000);
+			
+			// Get the GlobalOpenTelemetry instance from the agent
+			OpenTelemetry globalOtel = io.opentelemetry.api.GlobalOpenTelemetry.get();
+			
+			// Install it in the logback appender so logs are correlated with traces
+			io.opentelemetry.instrumentation.logback.appender.v1_0.OpenTelemetryAppender.install(globalOtel);
+			
+			System.out.println("Successfully installed agent's GlobalOpenTelemetry in logback appender");
+		} catch (Exception e) {
+			System.err.println("Failed to install agent's GlobalOpenTelemetry in logback appender: " + e.getMessage());
+			e.printStackTrace();
+		}
 	}
 	
 	private static void initializeOpenTelemetryLogs() {
@@ -41,19 +71,10 @@ public class Application {
 		// We should use that instead of creating our own SDK
 		boolean isAgentPresent = isAgentPresent();
 		
-		if (isAgentPresent) {
-			// Agent is present - it will handle traces, spans, and logs export
-			// We need to install the agent's GlobalOpenTelemetry instance in the logback appender
-			System.out.println("OpenTelemetry Java agent detected - using agent's GlobalOpenTelemetry instance");
-			try {
-				// Get the GlobalOpenTelemetry instance from the agent
-				OpenTelemetry globalOtel = io.opentelemetry.api.GlobalOpenTelemetry.get();
-				// Install it in the logback appender so logs are correlated with traces
-				io.opentelemetry.instrumentation.logback.appender.v1_0.OpenTelemetryAppender.install(globalOtel);
-				System.out.println("Installed agent's GlobalOpenTelemetry in logback appender");
-			} catch (Exception e) {
-				System.err.println("Failed to install agent's GlobalOpenTelemetry in logback appender: " + e.getMessage());
-			}
+		if (isAgentPresent()) {
+			// Agent is present - we will install its GlobalOpenTelemetry AFTER server starts
+			// to ensure the agent has fully initialized
+			System.out.println("OpenTelemetry Java agent detected - will install GlobalOpenTelemetry after server starts");
 			return;
 		}
 		
