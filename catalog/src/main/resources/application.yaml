@@ -14,7 +14,7 @@ coherence:
     ratio: -1
 otel:
   sdk:
-    disabled: false
+    disabled: true  # When Java agent is present, let it handle OpenTelemetry SDK initialization
   service:
     name: Catalog
   traces:
