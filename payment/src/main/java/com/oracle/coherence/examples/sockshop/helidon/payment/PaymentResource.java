@@ -12,14 +12,14 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.Response;
 
-import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Implementation of the Payment Service REST API.
  */
 @ApplicationScoped
 @Path("/payments")
-@Log
+@Slf4j
 public class PaymentResource implements PaymentApi {
 
     /**
@@ -60,14 +60,14 @@ public class PaymentResource implements PaymentApi {
             payments.saveAuthorization(auth);
 
             if (!auth.isAuthorised()) {
-                log.warning("Payment declined for order: " + orderId + ", reason: " + auth.getMessage());
+                log.warn("Payment declined for order: " + orderId + ", reason: " + auth.getMessage());
             } else {
                 log.info("Payment authorized for order: " + orderId);
             }
 
             return auth;
         } catch (Exception e) {
-            log.severe("Error authorizing payment for order: " + orderId + ", error: " + e.getMessage());
+            log.error("Error authorizing payment for order: " + orderId + ", error: " + e.getMessage());
             throw e;
         }
     }

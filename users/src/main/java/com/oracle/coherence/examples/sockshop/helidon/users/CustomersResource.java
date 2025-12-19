@@ -12,14 +12,14 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.Response;
 
-import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 
 import static com.oracle.coherence.examples.sockshop.helidon.users.JsonHelpers.embed;
 import static com.oracle.coherence.examples.sockshop.helidon.users.JsonHelpers.obj;
 
 @ApplicationScoped
 @Path("/customers")
-@Log
+@Slf4j
 public class CustomersResource implements CustomerApi {
 
     @Inject
@@ -42,7 +42,7 @@ public class CustomersResource implements CustomerApi {
         log.info("Deleting customer: " + id);
         User prev = users.removeUser(id);
         if (prev == null) {
-            log.warning("Customer not found for deletion: " + id);
+            log.warn("Customer not found for deletion: " + id);
         }
         return Response.ok(obj().add("status", prev != null).build()).build();
     }

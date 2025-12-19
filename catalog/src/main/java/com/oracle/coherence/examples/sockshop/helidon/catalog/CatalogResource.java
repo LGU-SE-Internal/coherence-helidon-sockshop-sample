@@ -15,7 +15,7 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.Response;
 
-import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 
 import static jakarta.ws.rs.core.Response.Status.NOT_FOUND;
 
@@ -24,7 +24,7 @@ import static jakarta.ws.rs.core.Response.Status.NOT_FOUND;
  */
 @ApplicationScoped
 @Path("/catalogue")
-@Log
+@Slf4j
 public class CatalogResource implements CatalogApi{
 
     @Inject

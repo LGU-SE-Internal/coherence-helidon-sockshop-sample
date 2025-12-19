@@ -15,7 +15,7 @@ import jakarta.ws.rs.Path;
 
 import io.helidon.grpc.api.Grpc;
 
-import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 
 import org.eclipse.microprofile.metrics.annotation.Timed;
 
@@ -27,7 +27,7 @@ import org.eclipse.microprofile.metrics.annotation.Timed;
 @Grpc.GrpcService("ShippingGrpc")
 @Grpc.GrpcMarshaller("jsonb")
 @Timed
-@Log
+@Slf4j
 public class ShippingResource implements ShippingApi {
 
     /**
@@ -42,7 +42,7 @@ public class ShippingResource implements ShippingApi {
         log.info("Getting shipment for order: " + orderId);
         Shipment shipment = shipments.getShipment(orderId);
         if (shipment == null) {
-            log.warning("Shipment not found for order: " + orderId);
+            log.warn("Shipment not found for order: " + orderId);
         }
         return shipment;
     }

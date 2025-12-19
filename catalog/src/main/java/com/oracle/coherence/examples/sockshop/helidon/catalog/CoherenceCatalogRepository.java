@@ -40,14 +40,14 @@ import com.tangosol.util.extractor.UniversalExtractor;
 import com.tangosol.util.filter.AlwaysFilter;
 import com.tangosol.util.filter.LimitFilter;
 
-import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * An implementation of {@link CatalogRepository}
  * that that uses Coherence as a backend data store.
  */
 @ApplicationScoped
-@Log
+@Slf4j
 public class CoherenceCatalogRepository implements CatalogRepository {
     private NamedMap<String, Sock> socks;
     private static Comparator<Sock> PRICE_COMPARATOR = new ExtractorComparator<>(new UniversalExtractor<Sock, Float>("price"));
@@ -145,7 +145,7 @@ public class CoherenceCatalogRepository implements CatalogRepository {
                     }
             );
         } catch (IOException e) {
-            log.warning(e.getMessage());
+            log.warn(e.getMessage());
             return Collections.emptyList();
         }
     }

@@ -18,7 +18,7 @@ import com.oracle.coherence.cdi.events.MapName;
 import com.oracle.coherence.cdi.events.Updated;
 import com.tangosol.net.events.partition.cache.EntryEvent;
 
-import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 
 import static com.oracle.coherence.examples.sockshop.helidon.orders.Order.Status.PAID;
 import static com.oracle.coherence.examples.sockshop.helidon.orders.Order.Status.PAYMENT_FAILED;
@@ -30,7 +30,7 @@ import static com.oracle.coherence.examples.sockshop.helidon.orders.Order.Status
  * to process payment and ship the order asynchronously, based on the
  * order status.
  */
-@Log
+@Slf4j
 @ApplicationScoped
 public class EventDrivenOrderProcessor implements OrderProcessor {
     /**

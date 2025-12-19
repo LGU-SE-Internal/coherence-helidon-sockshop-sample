@@ -12,14 +12,14 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.Response;
 
-import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Implementation of the Cart Service REST API.
  */
 @ApplicationScoped
 @Path("/carts")
-@Log
+@Slf4j
 public class CartResource implements CartApi {
 
     @Inject
@@ -36,7 +36,7 @@ public class CartResource implements CartApi {
         log.info("Deleting cart for customer: " + customerId);
         boolean deleted = carts.deleteCart(customerId);
         if (!deleted) {
-            log.warning("Cart not found for customer: " + customerId);
+            log.warn("Cart not found for customer: " + customerId);
         }
         return deleted ?
                 Response.accepted().build() :
@@ -48,7 +48,7 @@ public class CartResource implements CartApi {
         log.info("Merging carts for customer: " + customerId + ", session: " + sessionId);
         boolean fMerged = carts.mergeCarts(customerId, sessionId);
         if (!fMerged) {
-            log.warning("Failed to merge carts for customer: " + customerId);
+            log.warn("Failed to merge carts for customer: " + customerId);
         }
         return fMerged
                 ? Response.accepted().build()

@@ -20,7 +20,7 @@ import jakarta.ws.rs.core.Response;
 
 import io.helidon.security.providers.httpauth.HttpBasicAuthProvider;
 
-import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 
 import static com.oracle.coherence.examples.sockshop.helidon.users.JsonHelpers.obj;
 import static jakarta.ws.rs.core.Response.Status.CONFLICT;
@@ -35,7 +35,7 @@ import static jakarta.ws.rs.core.Response.Status.UNAUTHORIZED;
  */
 @ApplicationScoped
 @Path("/")
-@Log
+@Slf4j
 public class UserResource implements UserApi {
     static final String HEADER_AUTHENTICATION_REQUIRED = "WWW-Authenticate";
     static final String HEADER_AUTHENTICATION = "Authorization";
@@ -49,14 +49,14 @@ public class UserResource implements UserApi {
     @Override
     public Response login(String auth) {
         if (!auth.startsWith(BASIC_PREFIX)) {
-            log.warning("Login attempt with missing Basic authentication header");
+            log.warn("Login attempt with missing Basic authentication header");
             return fail("Basic authentication header is missing");
         }
         String  b64 = auth.substring(BASIC_PREFIX.length());
         String  usernameAndPassword = new String(Base64.getDecoder().decode(b64), StandardCharsets.UTF_8);
         Matcher matcher = CREDENTIAL_PATTERN.matcher(usernameAndPassword);
         if (!matcher.matches()) {
-            log.warning("Basic authentication header with invalid content: " + usernameAndPassword);
+            log.warn("Basic authentication header with invalid content: " + usernameAndPassword);
             return fail("Basic authentication header with invalid content");
         }
 
@@ -75,7 +75,7 @@ public class UserResource implements UserApi {
             return Response.ok(entity).build();
         }
         else {
-            log.warning("Failed login attempt for user: " + username);
+            log.warn("Failed login attempt for user: " + username);
             return fail("Invalid username or password");
         }
     }
@@ -86,7 +86,7 @@ public class UserResource implements UserApi {
         log.info("Registering new user: " + username);
         User prev = users.register(user);
         if (prev != null) {
-            log.warning("Registration failed - user already exists: " + username);
+            log.warn("Registration failed - user already exists: " + username);
             return Response.status(CONFLICT).entity("User with that ID already exists").build();
         }
         log.info("User registered successfully: " + username);
