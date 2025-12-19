@@ -19,7 +19,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 import jakarta.annotation.PostConstruct;
@@ -41,13 +40,15 @@ import com.tangosol.util.extractor.UniversalExtractor;
 import com.tangosol.util.filter.AlwaysFilter;
 import com.tangosol.util.filter.LimitFilter;
 
+import lombok.extern.java.Log;
+
 /**
  * An implementation of {@link CatalogRepository}
  * that that uses Coherence as a backend data store.
  */
 @ApplicationScoped
+@Log
 public class CoherenceCatalogRepository implements CatalogRepository {
-    private static final Logger LOGGER = Logger.getLogger(CoherenceCatalogRepository.class.getName());
     private NamedMap<String, Sock> socks;
     private static Comparator<Sock> PRICE_COMPARATOR = new ExtractorComparator<>(new UniversalExtractor<Sock, Float>("price"));
     private static Comparator<Sock> NAME_COMPARATOR  = new ExtractorComparator<>(new UniversalExtractor<Sock, String>("name"));
@@ -144,7 +145,7 @@ public class CoherenceCatalogRepository implements CatalogRepository {
                     }
             );
         } catch (IOException e) {
-            LOGGER.warning(e.getMessage());
+            log.warning(e.getMessage());
             return Collections.emptyList();
         }
     }
