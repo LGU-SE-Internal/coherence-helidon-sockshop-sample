@@ -1,5 +1,33 @@
 # 问题解答：OpenTelemetry Agent集成分析
 
+## 更新：修复日志导出问题
+
+### 问题发现
+之前的修复在检测到agent时会跳过SDK初始化，但是**没有安装agent的GlobalOpenTelemetry到logback appender中**。这导致即使agent存在，日志也无法导出到OTLP。
+
+### 根本原因
+`OpenTelemetryAppender`需要明确告知使用哪个OpenTelemetry实例。当我们跳过初始化时，appender没有安装任何OpenTelemetry实例，所以无法导出日志。
+
+### 最新修复
+现在当检测到agent时：
+1. 获取agent的`GlobalOpenTelemetry`实例
+2. 将其安装到`OpenTelemetryAppender`
+3. 确保日志通过OTLP导出并与traces关联
+
+### 预期行为（新版本）
+部署后，在日志中应该看到：
+```
+OpenTelemetry Java agent detected - using agent's GlobalOpenTelemetry instance
+Installed agent's GlobalOpenTelemetry in logback appender
+```
+
+然后日志应该：
+1. Console输出包含 `traceId=... spanId=...`
+2. 日志导出到OTLP collector
+3. 日志与traces正确关联
+
+---
+
 ## 问题1：手动创建的@WithSpan是否在agent存在时被自动禁用？
 
 **简短回答**：不是"禁用"，而是由agent接管处理。
@@ -48,6 +76,11 @@ if (isAgentPresent()) {
 3. **之前的SDK初始化冲突**
    - 手动SDK初始化可能在某些服务中失败
    - 导致OpenTelemetryAppender无法获取正确的span context
+
+4. **⚠️ 之前的bug：Appender未安装**
+   - 最初的修复跳过了SDK初始化，但忘记安装agent的GlobalOpenTelemetry
+   - 导致appender没有OpenTelemetry实例，无法导出日志
+   - **已在最新commit中修复**
 
 **解决方案（已实施）**：
 
