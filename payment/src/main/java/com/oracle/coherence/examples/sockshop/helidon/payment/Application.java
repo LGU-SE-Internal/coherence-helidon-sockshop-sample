@@ -36,6 +36,22 @@ public class Application {
 	}
 	
 	private static void initializeOpenTelemetryLogs() {
+		// Check if the OpenTelemetry Java agent is present
+		// When agent is present, it manages the GlobalOpenTelemetry instance
+		// We should use that instead of creating our own SDK
+		boolean isAgentPresent = isAgentPresent();
+		
+		if (isAgentPresent) {
+			// Agent is present - it will handle traces, spans, and logs export
+			// The logback appender will automatically use GlobalOpenTelemetry from the agent
+			// No manual initialization needed - just ensure the appender is configured in logback.xml
+			System.out.println("OpenTelemetry Java agent detected - using agent's GlobalOpenTelemetry instance");
+			return;
+		}
+		
+		// No agent present - initialize our own OpenTelemetry SDK for logs
+		System.out.println("No OpenTelemetry agent detected - initializing manual SDK for logs");
+		
 		// Get the OTLP endpoint from system properties or environment, with fallback to config
 		String otlpEndpoint = System.getProperty("otel.exporter.otlp.logs.endpoint",
 				System.getProperty("otel.exporter.otlp.endpoint",
@@ -73,5 +89,19 @@ public class Application {
 		// The appender uses Context.current() to get span context (from Helidon's tracer)
 		// and uses this SDK's LoggerProvider to emit logs with OTLP export
 		io.opentelemetry.instrumentation.logback.appender.v1_0.OpenTelemetryAppender.install(openTelemetrySdk);
+	}
+	
+	/**
+	 * Check if the OpenTelemetry Java agent is present by looking for the agent's classes
+	 * @return true if the agent is present, false otherwise
+	 */
+	private static boolean isAgentPresent() {
+		try {
+			// Try to load a class that only exists when the agent is attached
+			Class.forName("io.opentelemetry.javaagent.bootstrap.AgentClassLoader");
+			return true;
+		} catch (ClassNotFoundException e) {
+			return false;
+		}
 	}
 }
