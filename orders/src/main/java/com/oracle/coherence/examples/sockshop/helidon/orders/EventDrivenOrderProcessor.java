@@ -12,7 +12,6 @@ import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
 import io.opentelemetry.context.propagation.TextMapGetter;
-import io.opentelemetry.context.propagation.TextMapSetter;
 import io.opentelemetry.context.propagation.TextMapPropagator;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
@@ -29,7 +28,6 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.Map;
 
 import static com.oracle.coherence.examples.sockshop.helidon.orders.Order.Status.PAID;
@@ -80,34 +78,33 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
     
     /**
      * Inject OpenTelemetry trace context into Order object for async propagation.
+     * Manually builds W3C traceparent string from current span to avoid class loader issues with Java Agent.
      *
      * @param order the order to inject trace context into
      */
     private void injectTraceContext(Order order) {
-        Context current = Context.current();
-        Map<String, String> carrier = new HashMap<>();
+        Span currentSpan = Span.current();
+        var spanContext = currentSpan.getSpanContext();
         
-        // Use W3C TraceContext propagator from GlobalOpenTelemetry (standard trace context format)
-        TextMapPropagator propagator = GlobalOpenTelemetry.getPropagators().getTextMapPropagator();
-        propagator.inject(current, carrier, new TextMapSetter<Map<String, String>>() {
-            @Override
-            public void set(Map<String, String> carrier, String key, String value) {
-                if (carrier != null) {
-                    carrier.put(key, value);
-                }
-            }
-        });
-        
-        // Store the traceparent header in the order for later extraction
-        String traceparent = carrier.get("traceparent");
-        if (traceparent != null && !traceparent.isEmpty()) {
+        // Manually build W3C traceparent string: version-traceId-spanId-flags
+        // Format: 00-{trace-id}-{span-id}-{flags}
+        // This avoids class loader isolation issues with Java Agent's GlobalOpenTelemetry
+        if (spanContext.isValid()) {
+            String traceId = spanContext.getTraceId();
+            String spanId = spanContext.getSpanId();
+            String sampled = spanContext.isSampled() ? "01" : "00";
+            
+            String traceparent = String.format("00-%s-%s-%s", traceId, spanId, sampled);
             order.setTraceParent(traceparent);
-            log.debug("Injected W3C trace context into order {}: {}", order.getOrderId(), traceparent);
+            log.info("Injected W3C trace context into order {}: {}", order.getOrderId(), traceparent);
+        } else {
+            log.warn("Current span context is invalid, cannot inject trace context for order {}", order.getOrderId());
         }
     }
     
     /**
      * Extract OpenTelemetry trace context from Order object.
+     * Manually parses W3C traceparent string and restores context.
      *
      * @param order the order to extract trace context from
      * @return the restored context, or root context if no trace info available
@@ -116,7 +113,7 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
         String traceParent = order.getTraceParent();
         
         if (traceParent == null || traceParent.isEmpty()) {
-            log.debug("No trace context found in order {}", order.getOrderId());
+            log.info("No trace context found in order {}", order.getOrderId());
             return Context.root();
         }
         
@@ -124,7 +121,8 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
         Map<String, String> carrier = new HashMap<>();
         carrier.put("traceparent", traceParent);
         
-        // Extract context using W3C TraceContext propagator from GlobalOpenTelemetry
+        // Extract context using W3C TraceContext propagator
+        // Using GlobalOpenTelemetry which should work with the Java Agent
         TextMapPropagator propagator = GlobalOpenTelemetry.getPropagators().getTextMapPropagator();
         Context context = propagator.extract(Context.root(), carrier, new TextMapGetter<Map<String, String>>() {
             @Override
@@ -138,7 +136,7 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
             }
         });
         
-        log.debug("Extracted W3C trace context from order {}: {}", order.getOrderId(), traceParent);
+        log.info("Extracted W3C trace context from order {}: {}", order.getOrderId(), traceParent);
         return context;
     }
 
@@ -229,8 +227,11 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
         // This propagates the trace across the async boundary
         Context parentContext = extractTraceContext(order);
         
+        // Make the parent context current and create a new span as a child
+        // This is necessary because the parent span may already be closed
         try (Scope scope = parentContext.makeCurrent()) {
-            String traceId = Span.current().getSpanContext().getTraceId();
+            Span asyncSpan = Span.current();
+            String traceId = asyncSpan.getSpanContext().getTraceId();
             log.info("Processing order event for order: {} with status: {} (traceId: {})", 
                      order.getOrderId(), order.getStatus(), traceId);
             
