@@ -8,12 +8,14 @@
 package com.oracle.coherence.examples.sockshop.helidon.orders;
 
 import io.helidon.grpc.api.Grpc;
+import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.SpanKind;
+import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
 import io.opentelemetry.context.propagation.TextMapGetter;
 import io.opentelemetry.context.propagation.TextMapPropagator;
-import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.ObservesAsync;
@@ -227,41 +229,55 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
         // This propagates the trace across the async boundary
         Context parentContext = extractTraceContext(order);
         
-        // Make the parent context current and create a new span as a child
-        // This is necessary because the parent span may already be closed
+        // Make the parent context current and START a new span as a child
+        // This is critical: without starting a new span, the trace won't be visible in UI
         try (Scope scope = parentContext.makeCurrent()) {
-            Span asyncSpan = Span.current();
-            String traceId = asyncSpan.getSpanContext().getTraceId();
-            log.info("Processing order event for order: {} with status: {} (traceId: {})", 
-                     order.getOrderId(), order.getStatus(), traceId);
+            // Start a new span for this async processing operation
+            // The span will automatically become a child of the restored parent context
+            Span asyncSpan = GlobalOpenTelemetry.getTracer("orders-async")
+                .spanBuilder("process-order-event")
+                .setSpanKind(SpanKind.INTERNAL)
+                .startSpan();
             
-            switch (order.getStatus()) {
-            case CREATED:
-                try {
-                    processPayment(order);
-                }
-                finally {
-                    saveOrder(order);
-                }
-                break;
+            try (Scope spanScope = asyncSpan.makeCurrent()) {
+                String traceId = asyncSpan.getSpanContext().getTraceId();
+                log.info("Processing order event for order: {} with status: {} (traceId: {})", 
+                         order.getOrderId(), order.getStatus(), traceId);
+                
+                switch (order.getStatus()) {
+                case CREATED:
+                    try {
+                        processPayment(order);
+                    }
+                    finally {
+                        // Re-inject trace context after status change to ensure it persists
+                        injectTraceContext(order);
+                        saveOrder(order);
+                    }
+                    break;
 
-            case PAID:
-                try {
-                    shipOrder(order);
-                }
-                finally {
-                    saveOrder(order);
-                }
-                break;
+                case PAID:
+                    try {
+                        shipOrder(order);
+                    }
+                    finally {
+                        // Re-inject trace context after status change to ensure it persists
+                        injectTraceContext(order);
+                        saveOrder(order);
+                    }
+                    break;
 
-            default:
-                // do nothing, order is in a terminal state already
+                default:
+                    // do nothing, order is in a terminal state already
+                }
+            } catch (Exception e) {
+                log.error("Error processing order event for order: " + order.getOrderId(), e);
+                asyncSpan.recordException(e);
+                asyncSpan.setStatus(StatusCode.ERROR, e.getMessage());
+                throw e;
+            } finally {
+                asyncSpan.end();
             }
-        } catch (Exception e) {
-            log.error("Error processing order event for order: " + order.getOrderId(), e);
-            // Record exception in current span if available
-            Span.current().recordException(e);
-            throw e;
         }
     }
 }
