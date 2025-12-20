@@ -13,7 +13,8 @@ import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
 import io.opentelemetry.context.propagation.TextMapGetter;
 import io.opentelemetry.context.propagation.TextMapSetter;
-import io.opentelemetry.extension.trace.propagation.B3Propagator;
+import io.opentelemetry.context.propagation.TextMapPropagator;
+import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.ObservesAsync;
@@ -28,6 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Map;
 
 import static com.oracle.coherence.examples.sockshop.helidon.orders.Order.Status.PAID;
@@ -85,8 +87,9 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
         Context current = Context.current();
         Map<String, String> carrier = new HashMap<>();
         
-        // Use B3 propagator to inject trace context (compatible with most systems)
-        B3Propagator.injectingMultiHeaders().inject(current, carrier, new TextMapSetter<Map<String, String>>() {
+        // Use W3C TraceContext propagator from GlobalOpenTelemetry (standard trace context format)
+        TextMapPropagator propagator = GlobalOpenTelemetry.getPropagators().getTextMapPropagator();
+        propagator.inject(current, carrier, new TextMapSetter<Map<String, String>>() {
             @Override
             public void set(Map<String, String> carrier, String key, String value) {
                 if (carrier != null) {
@@ -95,13 +98,11 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
             }
         });
         
-        // Store the traceparent in the order for later extraction
-        if (carrier.containsKey("X-B3-TraceId")) {
-            String traceId = carrier.get("X-B3-TraceId");
-            String spanId = carrier.getOrDefault("X-B3-SpanId", "");
-            String sampled = carrier.getOrDefault("X-B3-Sampled", "1");
-            order.setTraceParent(traceId + "-" + spanId + "-" + sampled);
-            log.debug("Injected trace context into order {}: {}", order.getOrderId(), order.getTraceParent());
+        // Store the traceparent header in the order for later extraction
+        String traceparent = carrier.get("traceparent");
+        if (traceparent != null && !traceparent.isEmpty()) {
+            order.setTraceParent(traceparent);
+            log.debug("Injected W3C trace context into order {}: {}", order.getOrderId(), traceparent);
         }
     }
     
@@ -119,22 +120,13 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
             return Context.root();
         }
         
-        // Parse the stored trace context (format: traceId-spanId-sampled)
-        String[] parts = traceParent.split("-");
-        if (parts.length < 2) {
-            log.warn("Invalid trace context format in order {}: {}", order.getOrderId(), traceParent);
-            return Context.root();
-        }
-        
+        // Create a carrier map with the traceparent header
         Map<String, String> carrier = new HashMap<>();
-        carrier.put("X-B3-TraceId", parts[0]);
-        carrier.put("X-B3-SpanId", parts[1]);
-        if (parts.length > 2) {
-            carrier.put("X-B3-Sampled", parts[2]);
-        }
+        carrier.put("traceparent", traceParent);
         
-        // Extract context using B3 propagator
-        Context context = B3Propagator.injectingMultiHeaders().extract(Context.root(), carrier, new TextMapGetter<Map<String, String>>() {
+        // Extract context using W3C TraceContext propagator from GlobalOpenTelemetry
+        TextMapPropagator propagator = GlobalOpenTelemetry.getPropagators().getTextMapPropagator();
+        Context context = propagator.extract(Context.root(), carrier, new TextMapGetter<Map<String, String>>() {
             @Override
             public Iterable<String> keys(Map<String, String> carrier) {
                 return carrier != null ? carrier.keySet() : Collections.emptyList();
@@ -146,7 +138,7 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
             }
         });
         
-        log.debug("Extracted trace context from order {}: traceId={}", order.getOrderId(), parts[0]);
+        log.debug("Extracted W3C trace context from order {}: {}", order.getOrderId(), traceParent);
         return context;
     }
 
