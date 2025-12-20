@@ -8,6 +8,9 @@
 package com.oracle.coherence.examples.sockshop.helidon.orders;
 
 import io.helidon.grpc.api.Grpc;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.context.Context;
+import io.opentelemetry.context.Scope;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.ObservesAsync;
@@ -143,29 +146,42 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
     }
 
     void onOrderCreated(@ObservesAsync @Inserted @Updated @MapName("orders") EntryEvent<String, Order> event) {
+        // Capture the current OpenTelemetry context to propagate trace across async boundary
+        Context context = Context.current();
         Order order = event.getValue();
 
-        switch (order.getStatus()) {
-        case CREATED:
-            try {
-                processPayment(order);
-            }
-            finally {
-                saveOrder(order);
-            }
-            break;
+        // Restore the context in this async thread to maintain trace continuity
+        try (Scope scope = context.makeCurrent()) {
+            log.info("Processing order event for order: {} with status: {} (trace context propagated)", 
+                     order.getOrderId(), order.getStatus());
+            
+            switch (order.getStatus()) {
+            case CREATED:
+                try {
+                    processPayment(order);
+                }
+                finally {
+                    saveOrder(order);
+                }
+                break;
 
-        case PAID:
-            try {
-                shipOrder(order);
-            }
-            finally {
-                saveOrder(order);
-            }
-            break;
+            case PAID:
+                try {
+                    shipOrder(order);
+                }
+                finally {
+                    saveOrder(order);
+                }
+                break;
 
-        default:
-            // do nothing, order is in a terminal state already
+            default:
+                // do nothing, order is in a terminal state already
+            }
+        } catch (Exception e) {
+            log.error("Error processing order event for order: " + order.getOrderId(), e);
+            // Record exception in current span if available
+            Span.current().recordException(e);
+            throw e;
         }
     }
 }
