@@ -138,6 +138,8 @@
             <artifactId>coherence-mp-config</artifactId>
             <version>${version.lib.coherence}</version>
         </dependency>
+        <!-- Note: Coherence 25.03.2 has built-in OpenTelemetry tracing support that can be enabled via
+             environment variables: COHERENCE_TRACING_RATIO and OTEL_JAVA_GLOBAL_AUTOCONFIGURE_ENABLED -->
 
         <!-- jandex -->
         <dependency>
