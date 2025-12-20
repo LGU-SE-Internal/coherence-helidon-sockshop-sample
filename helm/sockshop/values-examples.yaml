@@ -122,25 +122,25 @@ global:
 # Deploy new version for specific services
 carts:
   image:
-    tag: "2.7.0-beta"
+    tag: "2.7.3-beta"
   replicas: 1
 
 # Keep old version for other services
 catalog:
   image:
-    tag: "2.7.0"
+    tag: "2.7.3"
 orders:
   image:
-    tag: "2.7.0"
+    tag: "2.7.3"
 payment:
   image:
-    tag: "2.7.0"
+    tag: "2.7.3"
 shipping:
   image:
-    tag: "2.7.0"
+    tag: "2.7.3"
 users:
   image:
-    tag: "2.7.0"
+    tag: "2.7.3"
 
 ---
 # Example 6: Custom resources for high-performance deployment

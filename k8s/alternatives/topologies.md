@@ -134,7 +134,7 @@ metadata:
 spec:
   role: Carts
   replicas: 1
-  image: 10.10.10.240/library/ss-carts:2.7.0
+  image: 10.10.10.240/library/ss-carts:2.7.3
   readinessProbe:
     initialDelaySeconds: 10
     periodSeconds: 10
@@ -203,7 +203,7 @@ metadata:
 spec:
   role: CartsStorage
   replicas: 1
-  image: 10.10.10.240/library/ss-carts:2.7.0
+  image: 10.10.10.240/library/ss-carts:2.7.3
   readinessProbe:
     initialDelaySeconds: 10
     periodSeconds: 10
