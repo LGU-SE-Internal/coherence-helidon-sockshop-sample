@@ -22,6 +22,11 @@ spec:
       heapSize: {{ .Values.coherence.jvm.memory.heapSize }}
     args:
       {{- toYaml .Values.coherence.jvm.args | nindent 6 }}
+  env:
+    - name: COHERENCE_TRACING_RATIO
+      value: "0"
+    - name: OTEL_JAVA_GLOBAL_AUTOCONFIGURE_ENABLED
+      value: "true"
   coherence:
     metrics:
       enabled: {{ .Values.coherence.metrics.enabled }}
