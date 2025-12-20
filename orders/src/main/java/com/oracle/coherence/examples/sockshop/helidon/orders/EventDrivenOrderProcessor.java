@@ -8,14 +8,9 @@
 package com.oracle.coherence.examples.sockshop.helidon.orders;
 
 import io.helidon.grpc.api.Grpc;
-import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.trace.Span;
-import io.opentelemetry.api.trace.SpanKind;
-import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
-import io.opentelemetry.context.propagation.TextMapGetter;
-import io.opentelemetry.context.propagation.TextMapPropagator;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.ObservesAsync;
@@ -27,10 +22,6 @@ import com.oracle.coherence.cdi.events.Updated;
 import com.tangosol.net.events.partition.cache.EntryEvent;
 
 import lombok.extern.slf4j.Slf4j;
-
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 
 import static com.oracle.coherence.examples.sockshop.helidon.orders.Order.Status.PAID;
 import static com.oracle.coherence.examples.sockshop.helidon.orders.Order.Status.PAYMENT_FAILED;
@@ -70,77 +61,9 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
     @Override
     @WithSpan
     public void processOrder(Order order) {
-        // Inject current trace context into the order before saving
-        // This allows trace propagation across async event boundaries
-        injectTraceContext(order);
         saveOrder(order);
     }
-    
     // ---- helpers ---------------------------------------------------------
-    
-    /**
-     * Inject OpenTelemetry trace context into Order object for async propagation.
-     * Manually builds W3C traceparent string from current span to avoid class loader issues with Java Agent.
-     *
-     * @param order the order to inject trace context into
-     */
-    private void injectTraceContext(Order order) {
-        Span currentSpan = Span.current();
-        var spanContext = currentSpan.getSpanContext();
-        
-        // Manually build W3C traceparent string: version-traceId-spanId-flags
-        // Format: 00-{trace-id}-{span-id}-{flags}
-        // This avoids class loader isolation issues with Java Agent's GlobalOpenTelemetry
-        if (spanContext.isValid()) {
-            String traceId = spanContext.getTraceId();
-            String spanId = spanContext.getSpanId();
-            String sampled = spanContext.isSampled() ? "01" : "00";
-            
-            String traceparent = String.format("00-%s-%s-%s", traceId, spanId, sampled);
-            order.setTraceParent(traceparent);
-            log.info("Injected W3C trace context into order {}: {}", order.getOrderId(), traceparent);
-        } else {
-            log.warn("Current span context is invalid, cannot inject trace context for order {}", order.getOrderId());
-        }
-    }
-    
-    /**
-     * Extract OpenTelemetry trace context from Order object.
-     * Manually parses W3C traceparent string and restores context.
-     *
-     * @param order the order to extract trace context from
-     * @return the restored context, or root context if no trace info available
-     */
-    private Context extractTraceContext(Order order) {
-        String traceParent = order.getTraceParent();
-        
-        if (traceParent == null || traceParent.isEmpty()) {
-            log.info("No trace context found in order {}", order.getOrderId());
-            return Context.root();
-        }
-        
-        // Create a carrier map with the traceparent header
-        Map<String, String> carrier = new HashMap<>();
-        carrier.put("traceparent", traceParent);
-        
-        // Extract context using W3C TraceContext propagator
-        // Using GlobalOpenTelemetry which should work with the Java Agent
-        TextMapPropagator propagator = GlobalOpenTelemetry.getPropagators().getTextMapPropagator();
-        Context context = propagator.extract(Context.root(), carrier, new TextMapGetter<Map<String, String>>() {
-            @Override
-            public Iterable<String> keys(Map<String, String> carrier) {
-                return carrier != null ? carrier.keySet() : Collections.emptyList();
-            }
-            
-            @Override
-            public String get(Map<String, String> carrier, String key) {
-                return carrier != null ? carrier.get(key) : null;
-            }
-        });
-        
-        log.info("Extracted W3C trace context from order {}: {}", order.getOrderId(), traceParent);
-        return context;
-    }
 
     /**
      * Save specified order.
@@ -223,67 +146,42 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
     }
 
     void onOrderCreated(@ObservesAsync @Inserted @Updated @MapName("orders") EntryEvent<String, Order> event) {
+        // Capture the current OpenTelemetry context to propagate trace across async boundary
+        Context context = Context.current();
         Order order = event.getValue();
-        
-        // Extract and restore the trace context from the Order object
-        // This propagates the trace across the async boundary
-        Context parentContext = extractTraceContext(order);
-        
-        // Preserve the original trace context string for re-injection
-        // This ensures all async events chain to the same parent, not to each other
-        String originalTraceParent = order.getTraceParent();
-        
-        // Make the parent context current and START a new span as a child
-        // This is critical: without starting a new span, the trace won't be visible in UI
-        try (Scope scope = parentContext.makeCurrent()) {
-            // Start a new span for this async processing operation
-            // The span will automatically become a child of the restored parent context
-            Span asyncSpan = GlobalOpenTelemetry.getTracer("orders-async")
-                .spanBuilder("process-order-event")
-                .setSpanKind(SpanKind.INTERNAL)
-                .startSpan();
+
+        // Restore the context in this async thread to maintain trace continuity
+        try (Scope scope = context.makeCurrent()) {
+            log.info("Processing order event for order: {} with status: {} (trace context propagated)", 
+                     order.getOrderId(), order.getStatus());
             
-            try (Scope spanScope = asyncSpan.makeCurrent()) {
-                String traceId = asyncSpan.getSpanContext().getTraceId();
-                log.info("Processing order event for order: {} with status: {} (traceId: {})", 
-                         order.getOrderId(), order.getStatus(), traceId);
-                
-                switch (order.getStatus()) {
-                case CREATED:
-                    try {
-                        processPayment(order);
-                    }
-                    finally {
-                        // Re-inject the ORIGINAL trace context (not current span) to ensure
-                        // all subsequent events remain siblings under the original parent
-                        order.setTraceParent(originalTraceParent);
-                        saveOrder(order);
-                    }
-                    break;
-
-                case PAID:
-                    try {
-                        shipOrder(order);
-                    }
-                    finally {
-                        // Re-inject the ORIGINAL trace context (not current span) to ensure
-                        // all subsequent events remain siblings under the original parent
-                        order.setTraceParent(originalTraceParent);
-                        saveOrder(order);
-                    }
-                    break;
-
-                default:
-                    // do nothing, order is in a terminal state already
+            switch (order.getStatus()) {
+            case CREATED:
+                try {
+                    processPayment(order);
                 }
-            } catch (Exception e) {
-                log.error("Error processing order event for order: " + order.getOrderId(), e);
-                asyncSpan.recordException(e);
-                asyncSpan.setStatus(StatusCode.ERROR, e.getMessage());
-                throw e;
-            } finally {
-                asyncSpan.end();
+                finally {
+                    saveOrder(order);
+                }
+                break;
+
+            case PAID:
+                try {
+                    shipOrder(order);
+                }
+                finally {
+                    saveOrder(order);
+                }
+                break;
+
+            default:
+                // do nothing, order is in a terminal state already
             }
+        } catch (Exception e) {
+            log.error("Error processing order event for order: " + order.getOrderId(), e);
+            // Record exception in current span if available
+            Span.current().recordException(e);
+            throw e;
         }
     }
 }
