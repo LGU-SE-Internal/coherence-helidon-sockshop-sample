@@ -23,18 +23,32 @@ as the application framework, in case one of those is your framework of choice.
 
 # Table of Contents
 
-* [Architecture](#architecture)
-* [Project Structure](#project-structure)
-* [Pre-Requisites](#pre-requisites)
-* [How to Run](#how-to-run)
-  * [Option 1: Using Helm (Recommended)](#option-1-using-helm-recommended)
-  * [Option 2: Using Kustomize](#option-2-using-kustomize)
-* [Complete Application Deployment](./doc/complete-application-deployment.md)
-* [Load Testing](#load-testing)
-* [Alternate Coherence Topologies](./k8s/alternatives/topologies.md)
-* [Integrating with Oracle OCI Application Performance Monitoring (APM)](./doc/oracle-cloud-apm.md)
-* [Development](./doc/development.md)
-* [License](#license)
+- [Coherence Helidon Sock Shop](#coherence-helidon-sock-shop)
+- [Table of Contents](#table-of-contents)
+  - [Architecture](#architecture)
+  - [Project Structure](#project-structure)
+  - [Pre-Requisites](#pre-requisites)
+  - [How to Run](#how-to-run)
+    - [Option 1: Using Helm (Recommended)](#option-1-using-helm-recommended)
+      - [Install the Coherence Operator](#install-the-coherence-operator)
+      - [Deploy Sock Shop](#deploy-sock-shop)
+      - [Customization Examples](#customization-examples)
+      - [Uninstall](#uninstall)
+    - [Option 2: Using Kustomize](#option-2-using-kustomize)
+      - [Install the Coherence Operator](#install-the-coherence-operator-1)
+      - [Installing Backend Services](#installing-backend-services)
+      - [Install Frontend](#install-frontend)
+      - [Install Load Generator (Optional)](#install-load-generator-optional)
+      - [Access the Application](#access-the-application)
+      - [Check Pod Status](#check-pod-status)
+      - [Cleanup](#cleanup)
+    - [Scale Back-End](#scale-back-end)
+  - [Complete Application Deployment](#complete-application-deployment)
+  - [Load Testing](#load-testing)
+  - [Development](#development)
+  - [Contributing](#contributing)
+  - [Security](#security)
+  - [License](#license)
 
 
 ## Architecture
@@ -85,7 +99,8 @@ all project repositories at once.
 3. Docker or Rancher
 4. A remote or local Kubernetes cluster - Min 1.16+
 5. Maven 3.8+ and JDK 17 (for development)
-
+kubectl exec <orders-pod> -- env | grep JAVA_TOOL_OPTIONS
+kubectl exec <carts-pod> -- env | grep JAVA_TOOL_OPTIONS
 ## How to Run
 
 There are two ways to deploy the Sock Shop application: using Helm (recommended) or using Kustomize.

@@ -12,7 +12,7 @@ spec:
   cluster: SockShop
   role: Payment
   replicas: 1
-  image: 10.10.10.240/library/ss-payment:2.4.1
+  image: 10.10.10.240/library/ss-payment:2.7.0
   readinessProbe:
     initialDelaySeconds: 10
     periodSeconds: 10

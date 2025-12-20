@@ -105,7 +105,7 @@ All backend services (carts, catalog, orders, payment, shipping, users) share co
 | `<service>.enabled` | Enable the service | `true` |
 | `<service>.replicas` | Number of replicas | `1` |
 | `<service>.image.repository` | Image repository | `ss-<service>` |
-| `<service>.image.tag` | Image tag | `2.4.1` |
+| `<service>.image.tag` | Image tag | `2.7.0` |
 
 ### Coherence Common Parameters
 
