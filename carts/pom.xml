@@ -143,19 +143,17 @@
             <version>${version.lib.jandex}</version>
         </dependency>
 
-        <!-- tracing -->
-        <dependency>
-            <groupId>io.helidon.microprofile.telemetry</groupId>
-            <artifactId>helidon-microprofile-telemetry</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.opentelemetry</groupId>
-            <artifactId>opentelemetry-exporter-otlp</artifactId>
-        </dependency>
+        <!-- OpenTelemetry API (for @WithSpan annotations and Span.current()) -->
+        <!-- Note: Tracing is handled by OpenTelemetry Java Agent, not Helidon MP Telemetry -->
         <dependency>
             <groupId>io.opentelemetry</groupId>
             <artifactId>opentelemetry-api-incubator</artifactId>
             <version>${version.lib.otel.incubator}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry.instrumentation</groupId>
+            <artifactId>opentelemetry-instrumentation-annotations</artifactId>
+            <version>2.11.0</version>
         </dependency>
 
         <!-- Lombok -->
