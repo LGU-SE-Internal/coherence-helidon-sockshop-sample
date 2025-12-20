@@ -11,6 +11,9 @@ import io.helidon.grpc.api.Grpc;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
+import io.opentelemetry.context.propagation.TextMapGetter;
+import io.opentelemetry.context.propagation.TextMapSetter;
+import io.opentelemetry.extension.trace.propagation.B3Propagator;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.ObservesAsync;
@@ -22,6 +25,10 @@ import com.oracle.coherence.cdi.events.Updated;
 import com.tangosol.net.events.partition.cache.EntryEvent;
 
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 import static com.oracle.coherence.examples.sockshop.helidon.orders.Order.Status.PAID;
 import static com.oracle.coherence.examples.sockshop.helidon.orders.Order.Status.PAYMENT_FAILED;
@@ -61,9 +68,87 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
     @Override
     @WithSpan
     public void processOrder(Order order) {
+        // Inject current trace context into the order before saving
+        // This allows trace propagation across async event boundaries
+        injectTraceContext(order);
         saveOrder(order);
     }
+    
     // ---- helpers ---------------------------------------------------------
+    
+    /**
+     * Inject OpenTelemetry trace context into Order object for async propagation.
+     *
+     * @param order the order to inject trace context into
+     */
+    private void injectTraceContext(Order order) {
+        Context current = Context.current();
+        Map<String, String> carrier = new HashMap<>();
+        
+        // Use B3 propagator to inject trace context (compatible with most systems)
+        B3Propagator.injectingMultiHeaders().inject(current, carrier, new TextMapSetter<Map<String, String>>() {
+            @Override
+            public void set(Map<String, String> carrier, String key, String value) {
+                if (carrier != null) {
+                    carrier.put(key, value);
+                }
+            }
+        });
+        
+        // Store the traceparent in the order for later extraction
+        if (carrier.containsKey("X-B3-TraceId")) {
+            String traceId = carrier.get("X-B3-TraceId");
+            String spanId = carrier.getOrDefault("X-B3-SpanId", "");
+            String sampled = carrier.getOrDefault("X-B3-Sampled", "1");
+            order.setTraceParent(traceId + "-" + spanId + "-" + sampled);
+            log.debug("Injected trace context into order {}: {}", order.getOrderId(), order.getTraceParent());
+        }
+    }
+    
+    /**
+     * Extract OpenTelemetry trace context from Order object.
+     *
+     * @param order the order to extract trace context from
+     * @return the restored context, or root context if no trace info available
+     */
+    private Context extractTraceContext(Order order) {
+        String traceParent = order.getTraceParent();
+        
+        if (traceParent == null || traceParent.isEmpty()) {
+            log.debug("No trace context found in order {}", order.getOrderId());
+            return Context.root();
+        }
+        
+        // Parse the stored trace context (format: traceId-spanId-sampled)
+        String[] parts = traceParent.split("-");
+        if (parts.length < 2) {
+            log.warn("Invalid trace context format in order {}: {}", order.getOrderId(), traceParent);
+            return Context.root();
+        }
+        
+        Map<String, String> carrier = new HashMap<>();
+        carrier.put("X-B3-TraceId", parts[0]);
+        carrier.put("X-B3-SpanId", parts[1]);
+        if (parts.length > 2) {
+            carrier.put("X-B3-Sampled", parts[2]);
+        }
+        
+        // Extract context using B3 propagator
+        Context context = B3Propagator.injectingMultiHeaders().extract(Context.root(), carrier, new TextMapGetter<Map<String, String>>() {
+            @Override
+            public Iterable<String> keys(Map<String, String> carrier) {
+                return carrier != null ? carrier.keySet() : Collections.emptyList();
+            }
+            
+            @Override
+            public String get(Map<String, String> carrier, String key) {
+                return carrier != null ? carrier.get(key) : null;
+            }
+        });
+        
+        log.debug("Extracted trace context from order {}: traceId={}", order.getOrderId(), parts[0]);
+        return context;
+    }
 
     /**
      * Save specified order.
@@ -146,14 +231,16 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
     }
 
     void onOrderCreated(@ObservesAsync @Inserted @Updated @MapName("orders") EntryEvent<String, Order> event) {
-        // Capture the current OpenTelemetry context to propagate trace across async boundary
-        Context context = Context.current();
         Order order = event.getValue();
-
-        // Restore the context in this async thread to maintain trace continuity
-        try (Scope scope = context.makeCurrent()) {
-            log.info("Processing order event for order: {} with status: {} (trace context propagated)", 
-                     order.getOrderId(), order.getStatus());
+        
+        // Extract and restore the trace context from the Order object
+        // This propagates the trace across the async boundary
+        Context parentContext = extractTraceContext(order);
+        
+        try (Scope scope = parentContext.makeCurrent()) {
+            String traceId = Span.current().getSpanContext().getTraceId();
+            log.info("Processing order event for order: {} with status: {} (traceId: {})", 
+                     order.getOrderId(), order.getStatus(), traceId);
             
             switch (order.getStatus()) {
             case CREATED:

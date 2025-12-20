@@ -89,6 +89,13 @@ public class Order implements Serializable, Comparable<Order> {
     @Schema(description = "Order status")
     private Status status;
 
+    /**
+     * Trace context for propagating OpenTelemetry trace across async boundaries.
+     * Contains W3C traceparent header value for trace correlation.
+     * This field is transient to avoid unnecessary database storage.
+     */
+    private transient String traceParent;
+
     @Builder
     public Order(Customer customer,
                  Address address,
