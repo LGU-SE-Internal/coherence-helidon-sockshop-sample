@@ -229,6 +229,10 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
         // This propagates the trace across the async boundary
         Context parentContext = extractTraceContext(order);
         
+        // Preserve the original trace context string for re-injection
+        // This ensures all async events chain to the same parent, not to each other
+        String originalTraceParent = order.getTraceParent();
+        
         // Make the parent context current and START a new span as a child
         // This is critical: without starting a new span, the trace won't be visible in UI
         try (Scope scope = parentContext.makeCurrent()) {
@@ -250,8 +254,9 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
                         processPayment(order);
                     }
                     finally {
-                        // Re-inject trace context after status change to ensure it persists
-                        injectTraceContext(order);
+                        // Re-inject the ORIGINAL trace context (not current span) to ensure
+                        // all subsequent events remain siblings under the original parent
+                        order.setTraceParent(originalTraceParent);
                         saveOrder(order);
                     }
                     break;
@@ -261,8 +266,9 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
                         shipOrder(order);
                     }
                     finally {
-                        // Re-inject trace context after status change to ensure it persists
-                        injectTraceContext(order);
+                        // Re-inject the ORIGINAL trace context (not current span) to ensure
+                        // all subsequent events remain siblings under the original parent
+                        order.setTraceParent(originalTraceParent);
                         saveOrder(order);
                     }
                     break;
