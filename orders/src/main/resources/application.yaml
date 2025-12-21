@@ -22,7 +22,7 @@ grpc:
           enabled: "false"
 grpc-client:
   grpc-services:
-    - tracing:
+    tracing:
 coherence:
   topic:
     enabled: false
