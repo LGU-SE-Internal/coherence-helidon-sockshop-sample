@@ -20,8 +20,9 @@ grpc:
         port: 80
         tls:
           enabled: "false"
-    services:
-      - tracing:
+grpc-client:
+  grpc-services:
+    - tracing:
 coherence:
   topic:
     enabled: false
