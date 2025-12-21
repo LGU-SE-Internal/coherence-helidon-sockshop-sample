@@ -8,13 +8,14 @@
 package com.oracle.coherence.examples.sockshop.helidon.shipping;
 
 import java.time.LocalDate;
-import java.util.logging.Logger;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Path;
 
 import io.helidon.grpc.api.Grpc;
+
+import lombok.extern.slf4j.Slf4j;
 
 import org.eclipse.microprofile.metrics.annotation.Timed;
 
@@ -26,8 +27,8 @@ import org.eclipse.microprofile.metrics.annotation.Timed;
 @Grpc.GrpcService("ShippingGrpc")
 @Grpc.GrpcMarshaller("jsonb")
 @Timed
+@Slf4j
 public class ShippingResource implements ShippingApi {
-    private static final Logger LOGGER = Logger.getLogger(ShippingResource.class.getName());
 
     /**
      * Shipment repository to use.
@@ -38,10 +39,10 @@ public class ShippingResource implements ShippingApi {
     @Override
     @Grpc.Unary
     public Shipment getShipmentByOrderId(String orderId) {
-        LOGGER.info("Getting shipment for order: " + orderId);
+        log.info("Getting shipment for order: " + orderId);
         Shipment shipment = shipments.getShipment(orderId);
         if (shipment == null) {
-            LOGGER.warning("Shipment not found for order: " + orderId);
+            log.warn("Shipment not found for order: " + orderId);
         }
         return shipment;
     }
@@ -51,7 +52,7 @@ public class ShippingResource implements ShippingApi {
     public Shipment ship(ShippingRequest req) {
         String orderId = req.getOrderId();
         int itemCount = req.getItemCount();
-        LOGGER.info("Creating shipment for order: " + orderId + ", items: " + itemCount);
+        log.info("Creating shipment for order: " + orderId + ", items: " + itemCount);
 
         // defaults
         String carrier = "USPS";
@@ -78,7 +79,7 @@ public class ShippingResource implements ShippingApi {
 
         shipments.saveShipment(shipment);
 
-        LOGGER.info("Shipment created for order: " + orderId + ", carrier: " + carrier + ", tracking: " + trackingNumber);
+        log.info("Shipment created for order: " + orderId + ", carrier: " + carrier + ", tracking: " + trackingNumber);
 
         return shipment;
     }

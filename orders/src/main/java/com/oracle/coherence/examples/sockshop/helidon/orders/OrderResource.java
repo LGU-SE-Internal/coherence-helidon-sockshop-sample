@@ -18,7 +18,7 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
 
-import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 
 import org.eclipse.microprofile.metrics.annotation.Timed;
 
@@ -30,7 +30,7 @@ import static jakarta.ws.rs.core.Response.Status.NOT_FOUND;
  */
 @ApplicationScoped
 @Path("/orders")
-@Log
+@Slf4j
 public class OrderResource implements OrderApi {
     /**
      * Order repository to use.

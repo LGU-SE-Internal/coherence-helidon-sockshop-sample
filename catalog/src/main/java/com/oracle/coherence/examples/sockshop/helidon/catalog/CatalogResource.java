@@ -9,12 +9,13 @@ package com.oracle.coherence.examples.sockshop.helidon.catalog;
 
 import java.io.InputStream;
 import java.util.Collection;
-import java.util.logging.Logger;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.Response;
+
+import lombok.extern.slf4j.Slf4j;
 
 import static jakarta.ws.rs.core.Response.Status.NOT_FOUND;
 
@@ -23,15 +24,15 @@ import static jakarta.ws.rs.core.Response.Status.NOT_FOUND;
  */
 @ApplicationScoped
 @Path("/catalogue")
+@Slf4j
 public class CatalogResource implements CatalogApi{
-    private static final Logger LOGGER = Logger.getLogger(CatalogResource.class.getName());
 
     @Inject
     private CatalogRepository catalog;
 
     @Override
     public Collection<? extends Sock> getSocks(String tags, String order, int pageNum, int pageSize) {
-        LOGGER.info("CatalogResource.getSocks: size=" + pageSize);
+        log.info("CatalogResource.getSocks: size=" + pageSize);
         return catalog.getSocks(tags, order, pageNum, pageSize);
     }
 

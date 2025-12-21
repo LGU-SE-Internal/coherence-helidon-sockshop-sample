@@ -23,7 +23,7 @@ import jakarta.enterprise.inject.spi.ProcessAnnotatedType;
 import jakarta.enterprise.inject.spi.ProcessInjectionPoint;
 import jakarta.enterprise.inject.spi.WithAnnotations;
 
-import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * @RegisterRestClient annotation is processed by Jersey to create a Bean that implements
@@ -31,7 +31,7 @@ import lombok.extern.java.Log;
  * ambiguity. This Extension finds InjectionPoints and modifies the set of Qualifiers, so
  * the one annotated with @Mock is selected by CDI.
  */
-@Log
+@Slf4j
 public class CdiMocks implements Extension {
    protected Set annotated = new HashSet();
 
@@ -40,7 +40,7 @@ public class CdiMocks implements Extension {
                                ProcessAnnotatedType<?> pat) {
        Class<?> clazz = pat.getAnnotatedType().getJavaClass();
        if (clazz.getInterfaces().length == 0) {
-          log.warning("CdiMocks: FOUND ANNOTATED CLASS, BUT IT DOES NOT IMPLEMENT ANYTHING - WILL NOT MOCK " + clazz);
+          log.warn("CdiMocks: FOUND ANNOTATED CLASS, BUT IT DOES NOT IMPLEMENT ANYTHING - WILL NOT MOCK " + clazz);
        }
 
        for(Class<?> iface: clazz.getInterfaces()) {
