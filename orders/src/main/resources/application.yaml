@@ -15,11 +15,15 @@ grpc:
         port: 80
         tls:
           enabled: "false"
+        interceptors:
+          - "com.oracle.coherence.examples.sockshop.helidon.orders.GrpcClientTraceInterceptor"
       - name: "shipping"
         host: "shipping"
         port: 80
         tls:
           enabled: "false"
+        interceptors:
+          - "com.oracle.coherence.examples.sockshop.helidon.orders.GrpcClientTraceInterceptor"
 coherence:
   topic:
     enabled: false

@@ -10,6 +10,9 @@ grpc:
       - name: "default"
         tls:
           enabled: "false"
+  server:
+    interceptors:
+      - "com.oracle.coherence.examples.sockshop.helidon.payment.GrpcServerTraceInterceptor"
 coherence:
   topic:
     enabled: false

@@ -17,6 +17,7 @@ import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
 import jakarta.enterprise.context.ApplicationScoped;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * gRPC server interceptor that extracts OpenTelemetry trace context from gRPC metadata.
@@ -26,6 +27,7 @@ import jakarta.enterprise.context.ApplicationScoped;
  * The interceptor wraps the listener to ensure the trace context is active during
  * all callback methods (onMessage, onHalfClose, etc.), not just during interceptCall.
  */
+@Slf4j
 @ApplicationScoped
 @Grpc.GrpcInterceptor
 public class GrpcServerTraceInterceptor implements ServerInterceptor {
@@ -34,12 +36,16 @@ public class GrpcServerTraceInterceptor implements ServerInterceptor {
     public <ReqT, RespT> ServerCall.Listener<ReqT> interceptCall(
             ServerCall<ReqT, RespT> call, Metadata headers, ServerCallHandler<ReqT, RespT> next) {
 
+        log.debug("GrpcServerTraceInterceptor intercepting call to method: {}", call.getMethodDescriptor().getFullMethodName());
+        
         // Extract trace context from gRPC metadata
         final Context extractedContext = GlobalOpenTelemetry.getPropagators().getTextMapPropagator().extract(
             Context.root(),
             headers,
             GrpcTraceUtils.METADATA_TEXT_MAP_GETTER
         );
+        
+        log.debug("Extracted trace context, valid: {}", extractedContext != Context.root());
 
         // Get the delegate listener
         ServerCall.Listener<ReqT> delegate = next.startCall(call, headers);
@@ -55,11 +61,13 @@ public class GrpcServerTraceInterceptor implements ServerInterceptor {
             
             @Override
             public void onMessage(ReqT message) {
+                log.debug("onMessage called with context");
                 withContext(() -> super.onMessage(message));
             }
 
             @Override
             public void onHalfClose() {
+                log.debug("onHalfClose called with context");
                 withContext(super::onHalfClose);
             }
 

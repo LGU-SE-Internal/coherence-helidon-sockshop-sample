@@ -18,12 +18,14 @@ import io.helidon.grpc.api.Grpc;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.context.Context;
 import jakarta.enterprise.context.ApplicationScoped;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * gRPC client interceptor that injects OpenTelemetry trace context into gRPC metadata.
  * This enables distributed tracing across gRPC calls in Helidon 4, which is not
  * automatically instrumented by the OpenTelemetry Java Agent.
  */
+@Slf4j
 @ApplicationScoped
 @Grpc.GrpcInterceptor
 public class GrpcClientTraceInterceptor implements ClientInterceptor {
@@ -31,6 +33,8 @@ public class GrpcClientTraceInterceptor implements ClientInterceptor {
     @Override
     public <ReqT, RespT> ClientCall<ReqT, RespT> interceptCall(
             MethodDescriptor<ReqT, RespT> method, CallOptions callOptions, Channel next) {
+        
+        log.debug("GrpcClientTraceInterceptor intercepting call to method: {}", method.getFullMethodName());
         
         return new ForwardingClientCall.SimpleForwardingClientCall<>(next.newCall(method, callOptions)) {
             @Override
@@ -42,6 +46,7 @@ public class GrpcClientTraceInterceptor implements ClientInterceptor {
                     (carrier, key, value) -> {
                         Metadata.Key<String> metadataKey = Metadata.Key.of(key, Metadata.ASCII_STRING_MARSHALLER);
                         carrier.put(metadataKey, value);
+                        log.debug("Injected trace header: {}={}", key, value);
                     }
                 );
                 super.start(responseListener, headers);
