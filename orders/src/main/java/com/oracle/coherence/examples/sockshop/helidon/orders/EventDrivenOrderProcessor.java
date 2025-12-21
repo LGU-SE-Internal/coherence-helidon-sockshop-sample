@@ -27,8 +27,6 @@ import com.tangosol.net.events.partition.cache.EntryEvent;
 
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.Map;
-
 import static com.oracle.coherence.examples.sockshop.helidon.orders.Order.Status.PAID;
 import static com.oracle.coherence.examples.sockshop.helidon.orders.Order.Status.PAYMENT_FAILED;
 import static com.oracle.coherence.examples.sockshop.helidon.orders.Order.Status.SHIPPED;
@@ -68,12 +66,12 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
     @WithSpan
     public void processOrder(Order order) {
         // Inject current trace context into order for async propagation
-        Map<String, String> traceContext = TraceUtils.injectCurrentContext();
-        order.setTraceContext(traceContext);
+        String traceParent = TraceUtils.injectCurrentTraceParent();
+        order.setTraceParent(traceParent);
         
-        if (TraceUtils.hasTraceContext(traceContext)) {
+        if (TraceUtils.hasTraceContext(traceParent)) {
             log.info("Injected trace context into order {}: {}", 
-                     order.getOrderId(), traceContext.get("traceparent"));
+                     order.getOrderId(), traceParent);
         }
         
         saveOrder(order);
@@ -162,14 +160,14 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
 
     void onOrderCreated(@ObservesAsync @Inserted @Updated @MapName("orders") EntryEvent<String, Order> event) {
         Order order = event.getValue();
-        Map<String, String> traceContext = order.getTraceContext();
+        String traceParent = order.getTraceParent();
         
         // Extract parent context from order
-        Context parentContext = TraceUtils.extractContext(traceContext);
+        Context parentContext = TraceUtils.extractContext(traceParent);
         
-        if (TraceUtils.hasTraceContext(traceContext)) {
+        if (TraceUtils.hasTraceContext(traceParent)) {
             log.info("Extracted trace context for order {}: {}", 
-                     order.getOrderId(), traceContext.get("traceparent"));
+                     order.getOrderId(), traceParent);
         } else {
             log.warn("No trace context found for order {}, creating new trace", order.getOrderId());
         }
@@ -188,7 +186,7 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
                      order.getOrderId(), order.getStatus(), asyncSpan.getSpanContext().getTraceId());
             
             // Save original trace context to propagate to next async event
-            Map<String, String> originalTraceContext = traceContext;
+            String originalTraceParent = traceParent;
             
             switch (order.getStatus()) {
             case CREATED:
@@ -197,7 +195,7 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
                 }
                 finally {
                     // Restore original trace context before saving (don't create cascading chain)
-                    order.setTraceContext(originalTraceContext);
+                    order.setTraceParent(originalTraceParent);
                     saveOrder(order);
                 }
                 break;
@@ -208,7 +206,7 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
                 }
                 finally {
                     // Restore original trace context before saving
-                    order.setTraceContext(originalTraceContext);
+                    order.setTraceParent(originalTraceParent);
                     saveOrder(order);
                 }
                 break;

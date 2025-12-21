@@ -38,54 +38,37 @@ public class TraceUtils {
     };
 
     /**
-     * Inject current trace context into a Map.
-     * Uses GlobalOpenTelemetry propagator to serialize the context.
-     * Falls back to manual W3C traceparent construction if propagator fails.
+     * Inject current trace context as W3C traceparent string.
+     * Manually constructs traceparent from current span to avoid class loader issues with Java Agent.
      *
-     * @return Map containing trace headers, or empty map if no active trace
+     * @return W3C traceparent string, or null if no active trace
      */
-    public static Map<String, String> injectCurrentContext() {
-        Map<String, String> carrier = new HashMap<>();
-        
-        try {
-            // Try to use GlobalOpenTelemetry propagator first
-            GlobalOpenTelemetry.getPropagators()
-                .getTextMapPropagator()
-                .inject(Context.current(), carrier, SETTER);
-            
-            // If injection succeeded and we have traceparent, return it
-            if (carrier.containsKey("traceparent")) {
-                return carrier;
-            }
-        } catch (Exception e) {
-            // Propagator may fail due to class loader isolation with Java Agent
-            // Fall through to manual construction
-        }
-        
-        // Fallback: manually construct W3C traceparent from current span
+    public static String injectCurrentTraceParent() {
         SpanContext spanContext = Span.current().getSpanContext();
         if (spanContext.isValid()) {
-            String traceparent = String.format("00-%s-%s-%02x",
+            return String.format("00-%s-%s-%02x",
                 spanContext.getTraceId(),
                 spanContext.getSpanId(),
                 spanContext.getTraceFlags().asByte());
-            carrier.put("traceparent", traceparent);
         }
-        
-        return carrier;
+        return null;
     }
 
     /**
-     * Extract trace context from a Map.
+     * Extract trace context from W3C traceparent string.
      * Uses GlobalOpenTelemetry propagator to deserialize the context.
      *
-     * @param carrier Map containing trace headers
+     * @param traceParent W3C traceparent string
      * @return Context with extracted trace information, or root context if extraction fails
      */
-    public static Context extractContext(Map<String, String> carrier) {
-        if (carrier == null || carrier.isEmpty()) {
+    public static Context extractContext(String traceParent) {
+        if (traceParent == null || traceParent.isEmpty()) {
             return Context.root();
         }
+        
+        // Convert string to Map for propagator
+        Map<String, String> carrier = new HashMap<>();
+        carrier.put("traceparent", traceParent);
         
         try {
             return GlobalOpenTelemetry.getPropagators()
@@ -98,12 +81,12 @@ public class TraceUtils {
     }
 
     /**
-     * Check if a context map contains valid trace information.
+     * Check if traceparent string is valid.
      *
-     * @param carrier Map to check
-     * @return true if carrier contains traceparent header
+     * @param traceParent traceparent string to check
+     * @return true if traceparent is not null and not empty
      */
-    public static boolean hasTraceContext(Map<String, String> carrier) {
-        return carrier != null && carrier.containsKey("traceparent");
+    public static boolean hasTraceContext(String traceParent) {
+        return traceParent != null && !traceParent.isEmpty();
     }
 }

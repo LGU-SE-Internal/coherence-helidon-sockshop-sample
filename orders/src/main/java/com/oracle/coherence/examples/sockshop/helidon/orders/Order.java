@@ -92,12 +92,12 @@ public class Order implements Serializable, Comparable<Order> {
     private Status status;
 
     /**
-     * Trace context for async propagation (transient - not persisted to cache).
-     * Stores W3C traceparent and other trace headers to maintain trace continuity
-     * across async event boundaries.
+     * Trace context for async propagation.
+     * Stores W3C traceparent header to maintain trace continuity across async event boundaries.
+     * This field is persisted so it survives the Coherence cache round-trip.
      */
-    @JsonbTransient
-    private transient Map<String, String> traceContext;
+    @JsonbProperty("traceParent")
+    private String traceParent;
 
     @Builder
     public Order(Customer customer,
