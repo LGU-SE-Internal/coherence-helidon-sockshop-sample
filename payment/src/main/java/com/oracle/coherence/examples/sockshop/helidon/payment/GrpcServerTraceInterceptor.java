@@ -11,6 +11,7 @@ import io.grpc.Metadata;
 import io.grpc.ServerCall;
 import io.grpc.ServerCallHandler;
 import io.grpc.ServerInterceptor;
+import io.helidon.grpc.api.Grpc;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
@@ -23,6 +24,7 @@ import jakarta.enterprise.context.ApplicationScoped;
  * automatically instrumented by the OpenTelemetry Java Agent.
  */
 @ApplicationScoped
+@Grpc.GrpcInterceptor
 public class GrpcServerTraceInterceptor implements ServerInterceptor {
 
     @Override
