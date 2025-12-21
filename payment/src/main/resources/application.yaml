@@ -24,7 +24,7 @@ otel:
   sdk:
     disabled: false
   service:
-    name: Orders
+    name: Payment
   traces:
     exporter: otlp
   logs:
