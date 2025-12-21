@@ -46,7 +46,7 @@ public class GrpcClientTraceInterceptor implements ClientInterceptor {
                     (carrier, key, value) -> {
                         Metadata.Key<String> metadataKey = Metadata.Key.of(key, Metadata.ASCII_STRING_MARSHALLER);
                         carrier.put(metadataKey, value);
-                        log.debug("Injected trace header: {}={}", key, value);
+                        log.debug("Injected trace header: {}", key);
                     }
                 );
                 super.start(responseListener, headers);
