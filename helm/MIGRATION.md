@@ -99,7 +99,7 @@ global:
 # Example: If you've customized images
 carts:
   image:
-    tag: "2.7.5"
+    tag: "2.8.3"
 
 # Example: If you've customized load generator
 loadgen:

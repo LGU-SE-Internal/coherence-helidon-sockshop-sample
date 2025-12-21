@@ -12,7 +12,7 @@ spec:
   cluster: SockShop
   role: Catalog
   replicas: 1
-  image: 10.10.10.240/library/ss-catalog:2.7.5
+  image: 10.10.10.240/library/ss-catalog:2.8.3
   readinessProbe:
     initialDelaySeconds: 10
     periodSeconds: 10

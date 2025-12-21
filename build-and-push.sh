@@ -13,7 +13,7 @@ mvn clean package -Pcontainer -DskipTests \
 
 echo ""
 echo "=== Step 2: Pushing images to ${REGISTRY}/${REPO} ==="
-for img in $(docker images --format "{{.Repository}}:{{.Tag}}" | grep "${REGISTRY}/${REPO}/ss-"| grep 2.7.5); do
+for img in $(docker images --format "{{.Repository}}:{{.Tag}}" | grep "${REGISTRY}/${REPO}/ss-"| grep 2.8.3); do
   echo "Pushing $img..."
   docker push $img
 done
