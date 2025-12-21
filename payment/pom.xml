@@ -21,7 +21,7 @@
     <groupId>com.oracle.coherence.examples.sockshop.helidon</groupId>
     <artifactId>payment</artifactId>
     <packaging>jar</packaging>
-    <version>2.8.3</version>
+    <version>2.9.0</version>
 
     <properties>
         <mainClass>com.oracle.coherence.examples.sockshop.helidon.payment.Application</mainClass>
@@ -145,9 +145,15 @@
             <artifactId>jandex</artifactId>
             <version>${version.lib.jandex}</version>
         </dependency>
-
-        <!-- OpenTelemetry API (for @WithSpan annotations and Span.current()) -->
-        <!-- Note: Tracing is handled by OpenTelemetry Java Agent, not Helidon MP Telemetry -->
+        <!-- tracing -->
+        <dependency>
+            <groupId>io.helidon.microprofile.telemetry</groupId>
+            <artifactId>helidon-microprofile-telemetry</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-exporter-otlp</artifactId>
+        </dependency>
         <dependency>
             <groupId>io.opentelemetry</groupId>
             <artifactId>opentelemetry-api-incubator</artifactId>

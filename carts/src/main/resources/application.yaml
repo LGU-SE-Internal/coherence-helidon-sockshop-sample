@@ -12,5 +12,20 @@ coherence:
     enabled: false
   tracing:
     ratio: -1
-# Note: OpenTelemetry tracing is handled by the Java agent (injected via Kubernetes annotation)
-# Configuration is provided via environment variables set by the OpenTelemetry Operator
+otel:
+  sdk:
+    disabled: false
+  service:
+    name: Orders
+  traces:
+    exporter: otlp
+  logs:
+    exporter: otlp
+  agent:
+    present: true
+  exporter:
+    otlp:
+      traces:
+        endpoint: http://opentelemetry-kube-stack-deployment-collector.monitoring:4317
+      logs:
+        endpoint: http://opentelemetry-kube-stack-deployment-collector.monitoring:4317
