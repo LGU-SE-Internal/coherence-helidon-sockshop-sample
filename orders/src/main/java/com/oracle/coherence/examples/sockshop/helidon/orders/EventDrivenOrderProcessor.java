@@ -181,6 +181,9 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
                     @Override public String traceId() { return tid; }
                     @Override public String spanId() { return sid; }
                     @Override public boolean sampled() { return sampled; }
+                    @Override public io.helidon.tracing.Baggage baggage() { 
+                        return io.helidon.tracing.Baggage.empty(); 
+                    }
                 };
                 log.info("Restored parent context for order {}: traceId={}, spanId={}", 
                          order.getOrderId(), tid, sid);
