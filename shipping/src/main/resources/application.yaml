@@ -20,20 +20,9 @@ coherence:
     enabled: false
   tracing:
     ratio: -1
-otel:
-  sdk:
-    disabled: false
+otel:  
   service:
     name: Shipping
-  traces:
-    exporter: otlp
-  logs:
-    exporter: otlp
   agent:
     present: true
-  exporter:
-    otlp:
-      traces:
-        endpoint: http://opentelemetry-kube-stack-deployment-collector.monitoring:4317
-      logs:
-        endpoint: http://opentelemetry-kube-stack-deployment-collector.monitoring:4317
+

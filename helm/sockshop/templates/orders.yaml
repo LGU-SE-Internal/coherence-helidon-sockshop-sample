@@ -25,6 +25,9 @@ spec:
   coherence:
     metrics:
       enabled: {{ .Values.coherence.metrics.enabled }}
+  env:
+    - name: OTEL_JAVA_GLOBAL_AUTOCONFIGURE_ENABLED
+      value: "true"
   ports:
     - name: http
       port: 7001

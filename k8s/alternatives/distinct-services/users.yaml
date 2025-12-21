@@ -11,7 +11,7 @@ metadata:
 spec:
   role: Users
   replicas: 1
-  image: 10.10.10.240/library/ss-users:2.9.0
+  image: 10.10.10.240/library/ss-users:2.9.6
   readinessProbe:
     initialDelaySeconds: 10
     periodSeconds: 10

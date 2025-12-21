@@ -143,7 +143,7 @@ helm upgrade sockshop ./helm/sockshop -n sockshop -f my-values.yaml
 
 # Update specific service image
 helm upgrade sockshop ./helm/sockshop -n sockshop \
-  --set carts.image.tag=2.9.0
+  --set carts.image.tag=2.9.6
 ```
 
 ## Load Generator Control
