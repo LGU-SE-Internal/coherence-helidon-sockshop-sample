@@ -35,7 +35,7 @@ public class GrpcServerTraceInterceptor implements ServerInterceptor {
             ServerCall<ReqT, RespT> call, Metadata headers, ServerCallHandler<ReqT, RespT> next) {
 
         // Extract trace context from gRPC metadata
-        Context extractedContext = GlobalOpenTelemetry.getPropagators().getTextMapPropagator().extract(
+        final Context extractedContext = GlobalOpenTelemetry.getPropagators().getTextMapPropagator().extract(
             Context.root(),
             headers,
             GrpcTraceUtils.METADATA_TEXT_MAP_GETTER
