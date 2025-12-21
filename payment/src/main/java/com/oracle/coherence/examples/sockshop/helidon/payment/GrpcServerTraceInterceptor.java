@@ -7,6 +7,7 @@
 
 package com.oracle.coherence.examples.sockshop.helidon.payment;
 
+import io.grpc.ForwardingServerCallListener;
 import io.grpc.Metadata;
 import io.grpc.ServerCall;
 import io.grpc.ServerCallHandler;
@@ -21,6 +22,9 @@ import jakarta.enterprise.context.ApplicationScoped;
  * gRPC server interceptor that extracts OpenTelemetry trace context from gRPC metadata.
  * This enables distributed tracing across gRPC calls in Helidon 4, which is not
  * automatically instrumented by the OpenTelemetry Java Agent.
+ * 
+ * The interceptor wraps the listener to ensure the trace context is active during
+ * all callback methods (onMessage, onHalfClose, etc.), not just during interceptCall.
  */
 @ApplicationScoped
 @Grpc.GrpcInterceptor
@@ -37,9 +41,45 @@ public class GrpcServerTraceInterceptor implements ServerInterceptor {
             GrpcTraceUtils.METADATA_TEXT_MAP_GETTER
         );
 
-        // Execute the call with the extracted context
-        try (Scope scope = extractedContext.makeCurrent()) {
-            return next.startCall(call, headers);
-        }
+        // Get the delegate listener
+        ServerCall.Listener<ReqT> delegate = next.startCall(call, headers);
+
+        // Wrap the listener to ensure context is active during all callbacks
+        return new ForwardingServerCallListener.SimpleForwardingServerCallListener<ReqT>(delegate) {
+            @Override
+            public void onMessage(ReqT message) {
+                try (Scope scope = extractedContext.makeCurrent()) {
+                    super.onMessage(message);
+                }
+            }
+
+            @Override
+            public void onHalfClose() {
+                try (Scope scope = extractedContext.makeCurrent()) {
+                    super.onHalfClose();
+                }
+            }
+
+            @Override
+            public void onCancel() {
+                try (Scope scope = extractedContext.makeCurrent()) {
+                    super.onCancel();
+                }
+            }
+
+            @Override
+            public void onComplete() {
+                try (Scope scope = extractedContext.makeCurrent()) {
+                    super.onComplete();
+                }
+            }
+
+            @Override
+            public void onReady() {
+                try (Scope scope = extractedContext.makeCurrent()) {
+                    super.onReady();
+                }
+            }
+        };
     }
 }
