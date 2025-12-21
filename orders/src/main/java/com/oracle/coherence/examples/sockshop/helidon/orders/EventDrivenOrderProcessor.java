@@ -8,7 +8,11 @@
 package com.oracle.coherence.examples.sockshop.helidon.orders;
 
 import io.helidon.grpc.api.Grpc;
+import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.SpanKind;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
@@ -22,6 +26,8 @@ import com.oracle.coherence.cdi.events.Updated;
 import com.tangosol.net.events.partition.cache.EntryEvent;
 
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.Map;
 
 import static com.oracle.coherence.examples.sockshop.helidon.orders.Order.Status.PAID;
 import static com.oracle.coherence.examples.sockshop.helidon.orders.Order.Status.PAYMENT_FAILED;
@@ -61,6 +67,15 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
     @Override
     @WithSpan
     public void processOrder(Order order) {
+        // Inject current trace context into order for async propagation
+        Map<String, String> traceContext = TraceUtils.injectCurrentContext();
+        order.setTraceContext(traceContext);
+        
+        if (TraceUtils.hasTraceContext(traceContext)) {
+            log.info("Injected trace context into order {}: {}", 
+                     order.getOrderId(), traceContext.get("traceparent"));
+        }
+        
         saveOrder(order);
     }
     // ---- helpers ---------------------------------------------------------
@@ -146,14 +161,34 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
     }
 
     void onOrderCreated(@ObservesAsync @Inserted @Updated @MapName("orders") EntryEvent<String, Order> event) {
-        // Capture the current OpenTelemetry context to propagate trace across async boundary
-        Context context = Context.current();
         Order order = event.getValue();
-
-        // Restore the context in this async thread to maintain trace continuity
-        try (Scope scope = context.makeCurrent()) {
-            log.info("Processing order event for order: {} with status: {} (trace context propagated)", 
-                     order.getOrderId(), order.getStatus());
+        Map<String, String> traceContext = order.getTraceContext();
+        
+        // Extract parent context from order
+        Context parentContext = TraceUtils.extractContext(traceContext);
+        
+        if (TraceUtils.hasTraceContext(traceContext)) {
+            log.info("Extracted trace context for order {}: {}", 
+                     order.getOrderId(), traceContext.get("traceparent"));
+        } else {
+            log.warn("No trace context found for order {}, creating new trace", order.getOrderId());
+        }
+        
+        // Create a new span as child of the restored context
+        Tracer tracer = GlobalOpenTelemetry.getTracer("orders-async");
+        Span asyncSpan = tracer.spanBuilder("process-order-event")
+                .setParent(parentContext)
+                .setSpanKind(SpanKind.INTERNAL)
+                .setAttribute("order.id", order.getOrderId())
+                .setAttribute("order.status", order.getStatus().toString())
+                .startSpan();
+        
+        try (Scope scope = asyncSpan.makeCurrent()) {
+            log.info("Processing order event for order: {} with status: {} (traceId: {})", 
+                     order.getOrderId(), order.getStatus(), asyncSpan.getSpanContext().getTraceId());
+            
+            // Save original trace context to propagate to next async event
+            Map<String, String> originalTraceContext = traceContext;
             
             switch (order.getStatus()) {
             case CREATED:
@@ -161,6 +196,8 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
                     processPayment(order);
                 }
                 finally {
+                    // Restore original trace context before saving (don't create cascading chain)
+                    order.setTraceContext(originalTraceContext);
                     saveOrder(order);
                 }
                 break;
@@ -170,6 +207,8 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
                     shipOrder(order);
                 }
                 finally {
+                    // Restore original trace context before saving
+                    order.setTraceContext(originalTraceContext);
                     saveOrder(order);
                 }
                 break;
@@ -177,11 +216,15 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
             default:
                 // do nothing, order is in a terminal state already
             }
+            
+            asyncSpan.setStatus(StatusCode.OK);
         } catch (Exception e) {
             log.error("Error processing order event for order: " + order.getOrderId(), e);
-            // Record exception in current span if available
-            Span.current().recordException(e);
+            asyncSpan.recordException(e);
+            asyncSpan.setStatus(StatusCode.ERROR, e.getMessage());
             throw e;
+        } finally {
+            asyncSpan.end();
         }
     }
 }

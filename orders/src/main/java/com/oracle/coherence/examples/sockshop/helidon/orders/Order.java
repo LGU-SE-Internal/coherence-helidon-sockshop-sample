@@ -12,9 +12,11 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Map;
 import java.util.UUID;
 
 import jakarta.json.bind.annotation.JsonbProperty;
+import jakarta.json.bind.annotation.JsonbTransient;
 
 import lombok.Builder;
 import lombok.Data;
@@ -88,6 +90,14 @@ public class Order implements Serializable, Comparable<Order> {
      */
     @Schema(description = "Order status")
     private Status status;
+
+    /**
+     * Trace context for async propagation (transient - not persisted to cache).
+     * Stores W3C traceparent and other trace headers to maintain trace continuity
+     * across async event boundaries.
+     */
+    @JsonbTransient
+    private transient Map<String, String> traceContext;
 
     @Builder
     public Order(Customer customer,
