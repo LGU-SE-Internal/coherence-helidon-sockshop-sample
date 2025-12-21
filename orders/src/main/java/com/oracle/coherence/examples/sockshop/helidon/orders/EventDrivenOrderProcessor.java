@@ -182,8 +182,8 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
         Span asyncSpan = spanBuilder.start();
         
         try (Scope scope = asyncSpan.activate()) {
-            log.info("Processing order event for order: {} with status: {} (traceId: {})", 
-                     order.getOrderId(), order.getStatus(), asyncSpan.spanId());
+            log.info("Processing order event for order: {} with status: {}", 
+                     order.getOrderId(), order.getStatus());
             
             // Save original trace context to propagate to next async event
             String originalTraceParent = traceParent;
