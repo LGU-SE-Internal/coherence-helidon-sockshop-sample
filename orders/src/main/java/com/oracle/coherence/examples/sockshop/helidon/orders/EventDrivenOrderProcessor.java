@@ -168,15 +168,33 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
         // Get Helidon's global tracer
         Tracer tracer = Tracer.global();
         
-        // Create a span using Helidon API - it will automatically handle context propagation
+        // Extract and construct Helidon-compatible parent context from W3C traceparent
+        io.helidon.tracing.SpanContext parentContext = null;
+        if (TraceUtils.hasTraceContext(traceParent)) {
+            // Parse W3C traceparent format: 00-{traceId}-{spanId}-{flags}
+            String[] parts = traceParent.split("-");
+            if (parts.length == 4) {
+                final String tid = parts[1];
+                final String sid = parts[2];
+                final boolean sampled = parts[3].equals("01");
+                parentContext = new io.helidon.tracing.SpanContext() {
+                    @Override public String traceId() { return tid; }
+                    @Override public String spanId() { return sid; }
+                    @Override public boolean sampled() { return sampled; }
+                };
+                log.info("Restored parent context for order {}: traceId={}, spanId={}", 
+                         order.getOrderId(), tid, sid);
+            }
+        }
+        
+        // Create a span using Helidon API with explicit parent context
         Span.Builder<?> spanBuilder = tracer.spanBuilder("process-order-event")
                 .tag("order.id", order.getOrderId())
                 .tag("order.status", order.getStatus().toString());
         
-        // If we have a trace parent, try to restore the context
-        if (TraceUtils.hasTraceContext(traceParent)) {
-            // Helidon will handle parent context extraction from current context
-            // The gRPC tracing integration will manage context propagation
+        // Explicitly set parent context if available
+        if (parentContext != null) {
+            spanBuilder.parent(parentContext);
         }
         
         Span asyncSpan = spanBuilder.start();
