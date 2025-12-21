@@ -15,7 +15,6 @@ import io.helidon.grpc.api.Grpc;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
-import io.opentelemetry.context.propagation.TextMapGetter;
 import jakarta.enterprise.context.ApplicationScoped;
 
 /**
@@ -35,16 +34,7 @@ public class GrpcServerTraceInterceptor implements ServerInterceptor {
         Context extractedContext = GlobalOpenTelemetry.getPropagators().getTextMapPropagator().extract(
             Context.root(),
             headers,
-            new TextMapGetter<Metadata>() {
-                @Override
-                public Iterable<String> keys(Metadata carrier) {
-                    return carrier.keys();
-                }
-                @Override
-                public String get(Metadata carrier, String key) {
-                    return carrier.get(Metadata.Key.of(key, Metadata.ASCII_STRING_MARSHALLER));
-                }
-            }
+            GrpcTraceUtils.METADATA_TEXT_MAP_GETTER
         );
 
         // Execute the call with the extracted context
