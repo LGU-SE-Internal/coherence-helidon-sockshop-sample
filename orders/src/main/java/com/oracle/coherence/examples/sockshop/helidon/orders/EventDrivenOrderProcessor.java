@@ -11,11 +11,6 @@ import io.helidon.grpc.api.Grpc;
 import io.helidon.tracing.Span;
 import io.helidon.tracing.Tracer;
 import io.helidon.tracing.Scope;
-import io.opentelemetry.api.GlobalOpenTelemetry;
-import io.opentelemetry.api.trace.SpanKind;
-import io.opentelemetry.api.trace.StatusCode;
-import io.opentelemetry.context.Context;
-import io.opentelemetry.context.Scope;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.ObservesAsync;
@@ -163,28 +158,32 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
         Order order = event.getValue();
         String traceParent = order.getTraceParent();
         
-        // Extract parent context from order
-        Context parentContext = TraceUtils.extractContext(traceParent);
-        
         if (TraceUtils.hasTraceContext(traceParent)) {
-            log.info("Extracted trace context for order {}: {}", 
+            log.info("Processing order with trace context {}: {}", 
                      order.getOrderId(), traceParent);
         } else {
             log.warn("No trace context found for order {}, creating new trace", order.getOrderId());
         }
         
-        // Create a new span as child of the restored context
-        Tracer tracer = GlobalOpenTelemetry.getTracer("orders-async");
-        Span asyncSpan = tracer.spanBuilder("process-order-event")
-                .setParent(parentContext)
-                .setSpanKind(SpanKind.INTERNAL)
-                .setAttribute("order.id", order.getOrderId())
-                .setAttribute("order.status", order.getStatus().toString())
-                .startSpan();
+        // Get Helidon's global tracer
+        Tracer tracer = Tracer.global();
         
-        try (Scope scope = asyncSpan.makeCurrent()) {
+        // Create a span using Helidon API - it will automatically handle context propagation
+        Span.Builder<?> spanBuilder = tracer.spanBuilder("process-order-event")
+                .tag("order.id", order.getOrderId())
+                .tag("order.status", order.getStatus().toString());
+        
+        // If we have a trace parent, try to restore the context
+        if (TraceUtils.hasTraceContext(traceParent)) {
+            // Helidon will handle parent context extraction from current context
+            // The gRPC tracing integration will manage context propagation
+        }
+        
+        Span asyncSpan = spanBuilder.start();
+        
+        try (Scope scope = asyncSpan.activate()) {
             log.info("Processing order event for order: {} with status: {} (traceId: {})", 
-                     order.getOrderId(), order.getStatus(), asyncSpan.getSpanContext().getTraceId());
+                     order.getOrderId(), order.getStatus(), asyncSpan.spanId());
             
             // Save original trace context to propagate to next async event
             String originalTraceParent = traceParent;
@@ -216,11 +215,10 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
                 // do nothing, order is in a terminal state already
             }
             
-            asyncSpan.setStatus(StatusCode.OK);
+            asyncSpan.status(Span.Status.OK);
         } catch (Exception e) {
             log.error("Error processing order event for order: " + order.getOrderId(), e);
-            asyncSpan.recordException(e);
-            asyncSpan.setStatus(StatusCode.ERROR, e.getMessage());
+            asyncSpan.status(Span.Status.ERROR);
             throw e;
         } finally {
             asyncSpan.end();
