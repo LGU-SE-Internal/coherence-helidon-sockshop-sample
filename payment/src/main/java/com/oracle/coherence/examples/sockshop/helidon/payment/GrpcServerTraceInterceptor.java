@@ -46,39 +46,36 @@ public class GrpcServerTraceInterceptor implements ServerInterceptor {
 
         // Wrap the listener to ensure context is active during all callbacks
         return new ForwardingServerCallListener.SimpleForwardingServerCallListener<ReqT>(delegate) {
+            
+            private void withContext(Runnable action) {
+                try (Scope scope = extractedContext.makeCurrent()) {
+                    action.run();
+                }
+            }
+            
             @Override
             public void onMessage(ReqT message) {
-                try (Scope scope = extractedContext.makeCurrent()) {
-                    super.onMessage(message);
-                }
+                withContext(() -> super.onMessage(message));
             }
 
             @Override
             public void onHalfClose() {
-                try (Scope scope = extractedContext.makeCurrent()) {
-                    super.onHalfClose();
-                }
+                withContext(super::onHalfClose);
             }
 
             @Override
             public void onCancel() {
-                try (Scope scope = extractedContext.makeCurrent()) {
-                    super.onCancel();
-                }
+                withContext(super::onCancel);
             }
 
             @Override
             public void onComplete() {
-                try (Scope scope = extractedContext.makeCurrent()) {
-                    super.onComplete();
-                }
+                withContext(super::onComplete);
             }
 
             @Override
             public void onReady() {
-                try (Scope scope = extractedContext.makeCurrent()) {
-                    super.onReady();
-                }
+                withContext(super::onReady);
             }
         };
     }
