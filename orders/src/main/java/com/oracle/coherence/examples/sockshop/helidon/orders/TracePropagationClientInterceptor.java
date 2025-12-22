@@ -21,7 +21,6 @@ import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.HashMap;
 import java.util.Optional;
 
 /**
@@ -36,6 +35,8 @@ public class TracePropagationClientInterceptor implements ClientInterceptor {
     
     private static final Metadata.Key<String> TRACEPARENT_KEY = 
             Metadata.Key.of("traceparent", Metadata.ASCII_STRING_MARSHALLER);
+    
+    private static final java.util.Map<String, java.util.List<String>> EMPTY_MAP = java.util.Collections.emptyMap();
 
     @Override
     public <ReqT, RespT> ClientCall<ReqT, RespT> interceptCall(
@@ -51,16 +52,16 @@ public class TracePropagationClientInterceptor implements ClientInterceptor {
                 // Extract traceparent from current span if available
                 Optional<Span> currentSpan = Span.current();
                 if (currentSpan.isPresent()) {
-                    HeaderConsumer consumer = HeaderConsumer.create(new HashMap<>());
+                    HeaderConsumer consumer = HeaderConsumer.create(EMPTY_MAP);
                     Tracer.global().inject(currentSpan.get().context(), null, consumer);
                     
                     consumer.get("traceparent").ifPresent(tp -> {
                         headers.put(TRACEPARENT_KEY, tp);
-                        log.info(">>>> [CLIENT INTERCEPTOR] Injecting traceparent to gRPC call {}: {}", 
+                        log.debug(">>>> [CLIENT INTERCEPTOR] Injecting traceparent to gRPC call {}: {}", 
                                 method.getFullMethodName(), tp);
                     });
                 } else {
-                    log.warn(">>>> [CLIENT INTERCEPTOR] No current span available for gRPC call {}", 
+                    log.debug(">>>> [CLIENT INTERCEPTOR] No current span available for gRPC call {}", 
                             method.getFullMethodName());
                 }
                 
