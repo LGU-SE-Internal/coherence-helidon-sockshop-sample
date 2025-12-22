@@ -37,30 +37,28 @@ public class TracePropagationClientInterceptor implements ClientInterceptor {
     
     private static final java.util.Map<String, java.util.List<String>> EMPTY_MAP = java.util.Collections.emptyMap();
     
-    private final ClientInterceptor attachHeadersInterceptor;
-    
-    public TracePropagationClientInterceptor() {
-        // Create metadata with trace headers
-        Metadata metadata = createMetadataWithTraceHeaders();
-        // Use MetadataUtils to create the interceptor
-        this.attachHeadersInterceptor = MetadataUtils.newAttachHeadersInterceptor(metadata);
-    }
-    
     private Metadata createMetadataWithTraceHeaders() {
         Metadata metadata = new Metadata();
+        
+        log.info(">>>> [CLIENT INTERCEPTOR] Creating metadata - checking for current span");
         
         // Extract traceparent from current span if available
         Optional<Span> currentSpan = Span.current();
         if (currentSpan.isPresent()) {
+            log.info(">>>> [CLIENT INTERCEPTOR] Current span found, extracting trace context");
             HeaderConsumer consumer = HeaderConsumer.create(EMPTY_MAP);
             Tracer.global().inject(currentSpan.get().context(), null, consumer);
             
-            consumer.get("traceparent").ifPresent(tp -> {
+            Optional<String> traceparent = consumer.get("traceparent");
+            if (traceparent.isPresent()) {
+                String tp = traceparent.get();
                 metadata.put(TRACEPARENT_KEY, tp);
-                log.debug(">>>> [CLIENT INTERCEPTOR] Creating metadata with traceparent: {}", tp);
-            });
+                log.info(">>>> [CLIENT INTERCEPTOR] Injecting traceparent to metadata: {}", tp);
+            } else {
+                log.warn(">>>> [CLIENT INTERCEPTOR] No traceparent found in HeaderConsumer");
+            }
         } else {
-            log.debug(">>>> [CLIENT INTERCEPTOR] No current span available");
+            log.warn(">>>> [CLIENT INTERCEPTOR] No current span available for trace propagation");
         }
         
         return metadata;
@@ -72,8 +70,13 @@ public class TracePropagationClientInterceptor implements ClientInterceptor {
             CallOptions callOptions,
             Channel next) {
         
+        log.info(">>>> [CLIENT INTERCEPTOR] interceptCall invoked for method: {}", method.getFullMethodName());
+        
         // Recreate metadata for each call to get current trace context
         Metadata metadata = createMetadataWithTraceHeaders();
+        
+        log.info(">>>> [CLIENT INTERCEPTOR] Metadata keys: {}", metadata.keys());
+        
         ClientInterceptor interceptor = MetadataUtils.newAttachHeadersInterceptor(metadata);
         
         return interceptor.interceptCall(method, callOptions, next);
