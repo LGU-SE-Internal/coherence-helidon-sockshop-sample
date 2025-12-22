@@ -7,6 +7,7 @@
 
 package com.oracle.coherence.examples.sockshop.helidon.orders;
 
+import io.grpc.Metadata;
 import io.helidon.grpc.api.Grpc;
 import io.helidon.tracing.Span;
 import io.helidon.tracing.Tracer;
@@ -39,6 +40,12 @@ import static com.oracle.coherence.examples.sockshop.helidon.orders.Order.Status
 @Slf4j
 @ApplicationScoped
 public class EventDrivenOrderProcessor implements OrderProcessor {
+    /**
+     * gRPC Metadata key for traceparent header used in manual trace propagation.
+     */
+    private static final Metadata.Key<String> TRACEPARENT_KEY = 
+            Metadata.Key.of("traceparent", Metadata.ASCII_STRING_MARSHALLER);
+
     /**
      * Order repository to use.
      */
@@ -98,7 +105,7 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
     @WithSpan
     protected void processPayment(Order order) {
         // Construct gRPC Metadata with trace headers
-        io.grpc.Metadata headers = createTracingHeaders();
+        Metadata headers = createTracingHeaders();
 
         PaymentRequest paymentRequest = PaymentRequest.builder()
                 .orderId(order.getOrderId())
@@ -136,7 +143,7 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
     @WithSpan
     protected void shipOrder(Order order) {
         // Construct gRPC Metadata with trace headers
-        io.grpc.Metadata headers = createTracingHeaders();
+        Metadata headers = createTracingHeaders();
 
         ShippingRequest shippingRequest = ShippingRequest.builder()
                 .orderId(order.getOrderId())
@@ -162,8 +169,8 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
      * 
      * @return Metadata object with traceparent header if a current span exists
      */
-    private io.grpc.Metadata createTracingHeaders() {
-        io.grpc.Metadata headers = new io.grpc.Metadata();
+    private Metadata createTracingHeaders() {
+        Metadata headers = new Metadata();
         
         // Extract traceparent from current span if available
         Optional<io.helidon.tracing.Span> currentSpan = io.helidon.tracing.Span.current();
@@ -172,8 +179,7 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
             io.helidon.tracing.Tracer.global().inject(currentSpan.get().context(), null, consumer);
             
             consumer.get("traceparent").ifPresent(tp -> {
-                io.grpc.Metadata.Key<String> tpKey = io.grpc.Metadata.Key.of("traceparent", io.grpc.Metadata.ASCII_STRING_MARSHALLER);
-                headers.put(tpKey, tp);
+                headers.put(TRACEPARENT_KEY, tp);
                 log.info(">>>> [MANUAL INJECT] Injecting to gRPC: {}", tp);
             });
         } else {
