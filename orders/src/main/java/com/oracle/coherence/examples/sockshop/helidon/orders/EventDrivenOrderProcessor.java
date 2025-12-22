@@ -7,7 +7,6 @@
 
 package com.oracle.coherence.examples.sockshop.helidon.orders;
 
-import io.grpc.Metadata;
 import io.helidon.grpc.api.Grpc;
 import io.helidon.tracing.Span;
 import io.helidon.tracing.Tracer;
@@ -40,12 +39,6 @@ import static com.oracle.coherence.examples.sockshop.helidon.orders.Order.Status
 @Slf4j
 @ApplicationScoped
 public class EventDrivenOrderProcessor implements OrderProcessor {
-    /**
-     * gRPC Metadata key for traceparent header used in manual trace propagation.
-     */
-    private static final Metadata.Key<String> TRACEPARENT_KEY = 
-            Metadata.Key.of("traceparent", Metadata.ASCII_STRING_MARSHALLER);
-
     /**
      * Order repository to use.
      */
@@ -104,9 +97,6 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
      */
     @WithSpan
     protected void processPayment(Order order) {
-        // Construct gRPC Metadata with trace headers
-        Metadata headers = createTracingHeaders();
-
         PaymentRequest paymentRequest = PaymentRequest.builder()
                 .orderId(order.getOrderId())
                 .customer(order.getCustomer())
@@ -116,8 +106,7 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
                 .build();
 
         log.info("Processing Payment: " + paymentRequest);
-        // Call with trace headers
-        Payment payment = paymentService.authorize(paymentRequest, headers);
+        Payment payment = paymentService.authorize(paymentRequest);
         if (payment == null) {
             payment = Payment.builder()
                     .authorised(false)
@@ -142,9 +131,6 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
      */
     @WithSpan
     protected void shipOrder(Order order) {
-        // Construct gRPC Metadata with trace headers
-        Metadata headers = createTracingHeaders();
-
         ShippingRequest shippingRequest = ShippingRequest.builder()
                 .orderId(order.getOrderId())
                 .customer(order.getCustomer())
@@ -153,8 +139,7 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
                 .build();
 
         log.info("Creating Shipment: " + shippingRequest);
-        // Call with trace headers
-        Shipment shipment = shippingService.ship(shippingRequest, headers);
+        Shipment shipment = shippingService.ship(shippingRequest);
         log.info("Created Shipment: " + shipment);
 
         order.setShipment(shipment);
@@ -162,32 +147,6 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
     }
 
     // ---- helper methods --------------------------------------------------
-
-    /**
-     * Creates gRPC Metadata with trace headers extracted from the current span.
-     * This enables manual trace propagation to downstream gRPC services.
-     * 
-     * @return Metadata object with traceparent header if a current span exists
-     */
-    private Metadata createTracingHeaders() {
-        Metadata headers = new Metadata();
-        
-        // Extract traceparent from current span if available
-        Optional<io.helidon.tracing.Span> currentSpan = io.helidon.tracing.Span.current();
-        if (currentSpan.isPresent()) {
-            io.helidon.tracing.HeaderConsumer consumer = io.helidon.tracing.HeaderConsumer.create(new java.util.HashMap<>());
-            io.helidon.tracing.Tracer.global().inject(currentSpan.get().context(), null, consumer);
-            
-            consumer.get("traceparent").ifPresent(tp -> {
-                headers.put(TRACEPARENT_KEY, tp);
-                log.info(">>>> [MANUAL INJECT] Injecting to gRPC: {}", tp);
-            });
-        } else {
-            log.warn(">>>> [MANUAL INJECT] No current span available for trace propagation");
-        }
-        
-        return headers;
-    }
 
     /**
      * An exception that is thrown if the payment is declined.

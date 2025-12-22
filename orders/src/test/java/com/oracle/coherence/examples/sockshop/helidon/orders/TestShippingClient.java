@@ -7,7 +7,6 @@
 
 package com.oracle.coherence.examples.sockshop.helidon.orders;
 
-import io.grpc.Metadata;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import static com.oracle.coherence.examples.sockshop.helidon.orders.TestDataFactory.shipment;
@@ -18,7 +17,7 @@ public class TestShippingClient implements ShippingClient {
    public TestShippingClient() {
    }
 
-   public Shipment ship(ShippingRequest request, Metadata headers) {
+   public Shipment ship(ShippingRequest request) {
       return shipment(request.getCustomer().getId());
    }
 }
