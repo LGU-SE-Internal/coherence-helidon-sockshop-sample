@@ -26,6 +26,7 @@ import org.eclipse.microprofile.metrics.annotation.Timed;
 @Path("/shipping")
 @Grpc.GrpcService("ShippingGrpc")
 @Grpc.GrpcMarshaller("jsonb")
+@Grpc.GrpcInterceptors(MetadataLogger.class)
 @Timed
 @Slf4j
 public class ShippingResource implements ShippingApi {

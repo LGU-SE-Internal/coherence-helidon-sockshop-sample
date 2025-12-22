@@ -23,6 +23,7 @@ import org.eclipse.microprofile.metrics.annotation.Counted;
 @ApplicationScoped
 @Grpc.GrpcService("PaymentGrpc")
 @Grpc.GrpcMarshaller("jsonb")
+@Grpc.GrpcInterceptors(MetadataLogger.class)
 public class PaymentGrpc {
     /**
      * Payment repository to use.

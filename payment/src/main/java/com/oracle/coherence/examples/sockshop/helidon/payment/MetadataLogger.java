@@ -20,7 +20,6 @@ import lombok.extern.slf4j.Slf4j;
  * Runs with high priority to ensure it executes before OpenTelemetry interceptors.
  */
 @ApplicationScoped
-@io.helidon.grpc.api.Grpc.GrpcInterceptor
 @Priority(1) // Execute before OTel interceptors
 @Slf4j
 public class MetadataLogger implements ServerInterceptor {
