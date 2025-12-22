@@ -97,18 +97,8 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
      */
     @WithSpan
     protected void processPayment(Order order) {
-        // 1. 构造 gRPC Metadata
-        io.grpc.Metadata headers = new io.grpc.Metadata();
-        
-        // 2. 手动从 Helidon Tracer 中提取 traceparent 并塞入
-        io.helidon.tracing.HeaderConsumer consumer = io.helidon.tracing.HeaderConsumer.create(new java.util.HashMap<>());
-        io.helidon.tracing.Tracer.global().inject(io.helidon.tracing.Span.current().get().context(), null, consumer);
-        
-        consumer.get("traceparent").ifPresent(tp -> {
-            io.grpc.Metadata.Key<String> tpKey = io.grpc.Metadata.Key.of("traceparent", io.grpc.Metadata.ASCII_STRING_MARSHALLER);
-            headers.put(tpKey, tp);
-            log.info(">>>> [MANUAL INJECT] Injecting to gRPC: {}", tp);
-        });
+        // Construct gRPC Metadata with trace headers
+        io.grpc.Metadata headers = createTracingHeaders();
 
         PaymentRequest paymentRequest = PaymentRequest.builder()
                 .orderId(order.getOrderId())
@@ -119,7 +109,7 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
                 .build();
 
         log.info("Processing Payment: " + paymentRequest);
-        // 3. 调用时传入 headers
+        // Call with trace headers
         Payment payment = paymentService.authorize(paymentRequest, headers);
         if (payment == null) {
             payment = Payment.builder()
@@ -145,18 +135,8 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
      */
     @WithSpan
     protected void shipOrder(Order order) {
-        // 1. 构造 gRPC Metadata
-        io.grpc.Metadata headers = new io.grpc.Metadata();
-        
-        // 2. 手动从 Helidon Tracer 中提取 traceparent 并塞入
-        io.helidon.tracing.HeaderConsumer consumer = io.helidon.tracing.HeaderConsumer.create(new java.util.HashMap<>());
-        io.helidon.tracing.Tracer.global().inject(io.helidon.tracing.Span.current().get().context(), null, consumer);
-        
-        consumer.get("traceparent").ifPresent(tp -> {
-            io.grpc.Metadata.Key<String> tpKey = io.grpc.Metadata.Key.of("traceparent", io.grpc.Metadata.ASCII_STRING_MARSHALLER);
-            headers.put(tpKey, tp);
-            log.info(">>>> [MANUAL INJECT] Injecting to gRPC: {}", tp);
-        });
+        // Construct gRPC Metadata with trace headers
+        io.grpc.Metadata headers = createTracingHeaders();
 
         ShippingRequest shippingRequest = ShippingRequest.builder()
                 .orderId(order.getOrderId())
@@ -166,7 +146,7 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
                 .build();
 
         log.info("Creating Shipment: " + shippingRequest);
-        // 3. 调用时传入 headers
+        // Call with trace headers
         Shipment shipment = shippingService.ship(shippingRequest, headers);
         log.info("Created Shipment: " + shipment);
 
@@ -175,6 +155,33 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
     }
 
     // ---- helper methods --------------------------------------------------
+
+    /**
+     * Creates gRPC Metadata with trace headers extracted from the current span.
+     * This enables manual trace propagation to downstream gRPC services.
+     * 
+     * @return Metadata object with traceparent header if a current span exists
+     */
+    private io.grpc.Metadata createTracingHeaders() {
+        io.grpc.Metadata headers = new io.grpc.Metadata();
+        
+        // Extract traceparent from current span if available
+        Optional<io.helidon.tracing.Span> currentSpan = io.helidon.tracing.Span.current();
+        if (currentSpan.isPresent()) {
+            io.helidon.tracing.HeaderConsumer consumer = io.helidon.tracing.HeaderConsumer.create(new java.util.HashMap<>());
+            io.helidon.tracing.Tracer.global().inject(currentSpan.get().context(), null, consumer);
+            
+            consumer.get("traceparent").ifPresent(tp -> {
+                io.grpc.Metadata.Key<String> tpKey = io.grpc.Metadata.Key.of("traceparent", io.grpc.Metadata.ASCII_STRING_MARSHALLER);
+                headers.put(tpKey, tp);
+                log.info(">>>> [MANUAL INJECT] Injecting to gRPC: {}", tp);
+            });
+        } else {
+            log.warn(">>>> [MANUAL INJECT] No current span available for trace propagation");
+        }
+        
+        return headers;
+    }
 
     /**
      * An exception that is thrown if the payment is declined.
