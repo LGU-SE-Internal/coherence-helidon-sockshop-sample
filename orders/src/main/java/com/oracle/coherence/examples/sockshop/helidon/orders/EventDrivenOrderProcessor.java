@@ -189,6 +189,11 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
                     }
                     return Optional.empty();
                 }
+                
+                @Override
+                public boolean contains(String key) {
+                    return "traceparent".equalsIgnoreCase(key);
+                }
             };
             
             // Use Helidon's extract method to parse the traceparent
