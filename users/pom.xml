@@ -30,6 +30,11 @@
         <jib.goal>dockerBuild</jib.goal>
         <coherence.group.id>com.oracle.coherence.ce</coherence.group.id>
 
+        <!-- java version -->
+        <maven.compiler.release>25</maven.compiler.release>
+        <maven.compiler.source>25</maven.compiler.source>
+        <maven.compiler.target>25</maven.compiler.target>
+
         <version.lib.coherence>25.03.2</version.lib.coherence>
         <version.lib.lombok>1.18.38</version.lib.lombok>
         <version.lib.junit>5.13.4</version.lib.junit>
