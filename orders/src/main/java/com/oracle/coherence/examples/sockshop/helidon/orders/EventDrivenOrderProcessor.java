@@ -97,6 +97,17 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
      */
     @WithSpan
     protected void processPayment(Order order) {
+        Tracer helidonTracer = Tracer.global();
+        Optional<Span> currentSpan = Span.current();
+        
+        log.info(">>>> [DIAGNOSTIC] Helidon Tracer Type: {}", helidonTracer.getClass().getName());
+        log.info(">>>> [DIAGNOSTIC] Current Span Active: {}", currentSpan.isPresent());
+        currentSpan.ifPresent(s -> log.info(">>>> [DIAGNOSTIC] TraceID before gRPC: {}", s.context().traceId()));
+        io.helidon.tracing.HeaderConsumer consumer = io.helidon.tracing.HeaderConsumer.create(new java.util.HashMap<>());
+        io.helidon.tracing.Tracer.global().inject(io.helidon.tracing.Span.current().get().context(), null, consumer);
+
+        // 打印出 Helidon 准备发往网线的 Header 字符串
+        log.warn(">>>> [WIRE CHECK] Helidon is injecting traceparent: {}", consumer.get("traceparent").orElse("NOT_FOUND"));
         PaymentRequest paymentRequest = PaymentRequest.builder()
                 .orderId(order.getOrderId())
                 .customer(order.getCustomer())
@@ -131,6 +142,17 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
      */
     @WithSpan
     protected void shipOrder(Order order) {
+        Tracer helidonTracer = Tracer.global();
+        Optional<Span> currentSpan = Span.current();
+        
+        log.info(">>>> [DIAGNOSTIC] Helidon Tracer Type: {}", helidonTracer.getClass().getName());
+        log.info(">>>> [DIAGNOSTIC] Current Span Active: {}", currentSpan.isPresent());
+        currentSpan.ifPresent(s -> log.info(">>>> [DIAGNOSTIC] TraceID before gRPC: {}", s.context().traceId()));
+        io.helidon.tracing.HeaderConsumer consumer = io.helidon.tracing.HeaderConsumer.create(new java.util.HashMap<>());
+        io.helidon.tracing.Tracer.global().inject(io.helidon.tracing.Span.current().get().context(), null, consumer);
+
+        // 打印出 Helidon 准备发往网线的 Header 字符串
+        log.warn(">>>> [WIRE CHECK] Helidon is injecting traceparent: {}", consumer.get("traceparent").orElse("NOT_FOUND"));
         ShippingRequest shippingRequest = ShippingRequest.builder()
                 .orderId(order.getOrderId())
                 .customer(order.getCustomer())

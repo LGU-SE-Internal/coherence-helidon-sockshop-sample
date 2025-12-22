@@ -21,7 +21,7 @@
     <groupId>com.oracle.coherence.examples.sockshop.helidon</groupId>
     <artifactId>orders</artifactId>
     <packaging>jar</packaging>
-    <version>2.9.6</version>
+    <version>2.9.22</version>
 
     <properties>
         <mainClass>com.oracle.coherence.examples.sockshop.helidon.orders.Application</mainClass>
@@ -347,7 +347,7 @@
                         <version>${version.plugin.jib}</version>
                         <configuration>
                             <from>
-                                <image>gcr.io/distroless/java25-debian12</image>
+                                <image>gcr.io/distroless/java25-debian13</image>
                             </from>
                             <to>
                                 <image>${docker.registry.url}/${docker.registry.name}/ss-${project.artifactId}</image>

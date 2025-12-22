@@ -31,7 +31,7 @@ public class MetadataLogger implements ServerInterceptor {
             ServerCallHandler<ReqT, RespT> next) {
         
         log.info("=== gRPC Request Metadata for {} ===", call.getMethodDescriptor().getFullMethodName());
-        
+        log.info(">>>> FULL RAW METADATA: {}", headers.toString());
         // Log all metadata headers
         for (String key : headers.keys()) {
             if (key.endsWith("-bin")) {

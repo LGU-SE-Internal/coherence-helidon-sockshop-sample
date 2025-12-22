@@ -11,7 +11,7 @@ metadata:
 spec:
   role: ShippingStorage
   replicas: 1
-  image: 10.10.10.240/library/ss-shipping:2.9.6
+  image: 10.10.10.240/library/ss-shipping:2.9.22
   readinessProbe:
     initialDelaySeconds: 10
     periodSeconds: 10
