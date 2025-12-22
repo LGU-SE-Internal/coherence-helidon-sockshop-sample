@@ -7,6 +7,7 @@
 
 package com.oracle.coherence.examples.sockshop.helidon.orders;
 
+import io.grpc.Metadata;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import static com.oracle.coherence.examples.sockshop.helidon.orders.TestDataFactory.payment;
@@ -17,7 +18,7 @@ public class TestPaymentClient implements PaymentClient {
    public TestPaymentClient() {
    }
 
-   public Payment authorize(PaymentRequest request) {
+   public Payment authorize(PaymentRequest request, Metadata headers) {
       return payment(request.getCustomer().getId());
    }
 }

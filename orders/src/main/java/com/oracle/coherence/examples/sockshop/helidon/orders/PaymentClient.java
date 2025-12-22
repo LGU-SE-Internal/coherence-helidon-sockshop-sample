@@ -7,6 +7,7 @@
 
 package com.oracle.coherence.examples.sockshop.helidon.orders;
 
+import io.grpc.Metadata;
 import io.helidon.grpc.api.Grpc;
 
 @Grpc.GrpcService("PaymentGrpc")
@@ -14,5 +15,5 @@ import io.helidon.grpc.api.Grpc;
 @Grpc.GrpcMarshaller("jsonb")
 public interface PaymentClient {
    @Grpc.Unary
-   Payment authorize(PaymentRequest request);
+   Payment authorize(PaymentRequest request, Metadata headers);
 }

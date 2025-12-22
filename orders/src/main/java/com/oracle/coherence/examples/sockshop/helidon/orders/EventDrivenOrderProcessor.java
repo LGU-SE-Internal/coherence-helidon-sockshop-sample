@@ -97,17 +97,19 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
      */
     @WithSpan
     protected void processPayment(Order order) {
-        Tracer helidonTracer = Tracer.global();
-        Optional<Span> currentSpan = Span.current();
+        // 1. 构造 gRPC Metadata
+        io.grpc.Metadata headers = new io.grpc.Metadata();
         
-        log.info(">>>> [DIAGNOSTIC] Helidon Tracer Type: {}", helidonTracer.getClass().getName());
-        log.info(">>>> [DIAGNOSTIC] Current Span Active: {}", currentSpan.isPresent());
-        currentSpan.ifPresent(s -> log.info(">>>> [DIAGNOSTIC] TraceID before gRPC: {}", s.context().traceId()));
+        // 2. 手动从 Helidon Tracer 中提取 traceparent 并塞入
         io.helidon.tracing.HeaderConsumer consumer = io.helidon.tracing.HeaderConsumer.create(new java.util.HashMap<>());
         io.helidon.tracing.Tracer.global().inject(io.helidon.tracing.Span.current().get().context(), null, consumer);
+        
+        consumer.get("traceparent").ifPresent(tp -> {
+            io.grpc.Metadata.Key<String> tpKey = io.grpc.Metadata.Key.of("traceparent", io.grpc.Metadata.ASCII_STRING_MARSHALLER);
+            headers.put(tpKey, tp);
+            log.info(">>>> [MANUAL INJECT] Injecting to gRPC: {}", tp);
+        });
 
-        // 打印出 Helidon 准备发往网线的 Header 字符串
-        log.warn(">>>> [WIRE CHECK] Helidon is injecting traceparent: {}", consumer.get("traceparent").orElse("NOT_FOUND"));
         PaymentRequest paymentRequest = PaymentRequest.builder()
                 .orderId(order.getOrderId())
                 .customer(order.getCustomer())
@@ -117,7 +119,8 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
                 .build();
 
         log.info("Processing Payment: " + paymentRequest);
-        Payment payment = paymentService.authorize(paymentRequest);
+        // 3. 调用时传入 headers
+        Payment payment = paymentService.authorize(paymentRequest, headers);
         if (payment == null) {
             payment = Payment.builder()
                     .authorised(false)
@@ -142,17 +145,19 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
      */
     @WithSpan
     protected void shipOrder(Order order) {
-        Tracer helidonTracer = Tracer.global();
-        Optional<Span> currentSpan = Span.current();
+        // 1. 构造 gRPC Metadata
+        io.grpc.Metadata headers = new io.grpc.Metadata();
         
-        log.info(">>>> [DIAGNOSTIC] Helidon Tracer Type: {}", helidonTracer.getClass().getName());
-        log.info(">>>> [DIAGNOSTIC] Current Span Active: {}", currentSpan.isPresent());
-        currentSpan.ifPresent(s -> log.info(">>>> [DIAGNOSTIC] TraceID before gRPC: {}", s.context().traceId()));
+        // 2. 手动从 Helidon Tracer 中提取 traceparent 并塞入
         io.helidon.tracing.HeaderConsumer consumer = io.helidon.tracing.HeaderConsumer.create(new java.util.HashMap<>());
         io.helidon.tracing.Tracer.global().inject(io.helidon.tracing.Span.current().get().context(), null, consumer);
+        
+        consumer.get("traceparent").ifPresent(tp -> {
+            io.grpc.Metadata.Key<String> tpKey = io.grpc.Metadata.Key.of("traceparent", io.grpc.Metadata.ASCII_STRING_MARSHALLER);
+            headers.put(tpKey, tp);
+            log.info(">>>> [MANUAL INJECT] Injecting to gRPC: {}", tp);
+        });
 
-        // 打印出 Helidon 准备发往网线的 Header 字符串
-        log.warn(">>>> [WIRE CHECK] Helidon is injecting traceparent: {}", consumer.get("traceparent").orElse("NOT_FOUND"));
         ShippingRequest shippingRequest = ShippingRequest.builder()
                 .orderId(order.getOrderId())
                 .customer(order.getCustomer())
@@ -161,7 +166,8 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
                 .build();
 
         log.info("Creating Shipment: " + shippingRequest);
-        Shipment shipment = shippingService.ship(shippingRequest);
+        // 3. 调用时传入 headers
+        Shipment shipment = shippingService.ship(shippingRequest, headers);
         log.info("Created Shipment: " + shipment);
 
         order.setShipment(shipment);

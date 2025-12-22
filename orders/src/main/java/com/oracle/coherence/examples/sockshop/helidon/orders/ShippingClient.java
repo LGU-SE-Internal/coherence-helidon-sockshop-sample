@@ -7,6 +7,7 @@
 
 package com.oracle.coherence.examples.sockshop.helidon.orders;
 
+import io.grpc.Metadata;
 import io.helidon.grpc.api.Grpc;
 
 @Grpc.GrpcService("ShippingGrpc")
@@ -14,5 +15,5 @@ import io.helidon.grpc.api.Grpc;
 @Grpc.GrpcMarshaller("jsonb")
 public interface ShippingClient {
     @Grpc.Unary
-    Shipment ship(ShippingRequest request);
+    Shipment ship(ShippingRequest request, Metadata headers);
 }
