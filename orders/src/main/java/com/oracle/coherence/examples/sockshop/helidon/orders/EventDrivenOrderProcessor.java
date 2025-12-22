@@ -11,6 +11,7 @@ import io.helidon.grpc.api.Grpc;
 import io.helidon.tracing.Span;
 import io.helidon.tracing.Tracer;
 import io.helidon.tracing.Scope;
+import io.helidon.tracing.HeaderProvider;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.ObservesAsync;
@@ -22,6 +23,8 @@ import com.oracle.coherence.cdi.events.Updated;
 import com.tangosol.net.events.partition.cache.EntryEvent;
 
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.Optional;
 
 import static com.oracle.coherence.examples.sockshop.helidon.orders.Order.Status.PAID;
 import static com.oracle.coherence.examples.sockshop.helidon.orders.Order.Status.PAYMENT_FAILED;
@@ -168,25 +171,31 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
         // Get Helidon's global tracer
         Tracer tracer = Tracer.global();
         
-        // Extract and construct Helidon-compatible parent context from W3C traceparent
-        io.helidon.tracing.SpanContext parentContext = null;
+        // Extract parent context using Helidon's built-in parser
+        Optional<io.helidon.tracing.SpanContext> parentContext = Optional.empty();
         if (TraceUtils.hasTraceContext(traceParent)) {
-            // Parse W3C traceparent format: 00-{traceId}-{spanId}-{flags}
-            String[] parts = traceParent.split("-");
-            if (parts.length == 4) {
-                final String tid = parts[1];
-                final String sid = parts[2];
-                final boolean sampled = parts[3].equals("01");
-                parentContext = new io.helidon.tracing.SpanContext() {
-                    @Override public String traceId() { return tid; }
-                    @Override public String spanId() { return sid; }
-                    @Override public boolean sampled() { return sampled; }
-                    @Override public io.helidon.tracing.Baggage baggage() { 
-                        return io.helidon.tracing.Baggage.empty(); 
+            // Create a HeaderProvider that provides the traceparent header
+            final String finalTraceParent = traceParent;
+            HeaderProvider headerProvider = new HeaderProvider() {
+                @Override
+                public Iterable<String> keys() {
+                    return java.util.List.of("traceparent");
+                }
+                
+                @Override
+                public Optional<String> get(String key) {
+                    if ("traceparent".equalsIgnoreCase(key)) {
+                        return Optional.of(finalTraceParent);
                     }
-                };
-                log.info("Restored parent context for order {}: traceId={}, spanId={}", 
-                         order.getOrderId(), tid, sid);
+                    return Optional.empty();
+                }
+            };
+            
+            // Use Helidon's extract method to parse the traceparent
+            parentContext = tracer.extract(headerProvider);
+            if (parentContext.isPresent()) {
+                log.info("Extracted parent context for order {}: traceId={}", 
+                         order.getOrderId(), parentContext.get().traceId());
             }
         }
         
@@ -196,9 +205,7 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
                 .tag("order.status", order.getStatus().toString());
         
         // Explicitly set parent context if available
-        if (parentContext != null) {
-            spanBuilder.parent(parentContext);
-        }
+        parentContext.ifPresent(spanBuilder::parent);
         
         Span asyncSpan = spanBuilder.start();
         
