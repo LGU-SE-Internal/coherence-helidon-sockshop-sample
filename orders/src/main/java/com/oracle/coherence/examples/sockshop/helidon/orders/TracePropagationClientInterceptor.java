@@ -18,9 +18,7 @@ import io.helidon.grpc.api.Grpc;
 import io.helidon.tracing.HeaderConsumer;
 import io.helidon.tracing.Span;
 import io.helidon.tracing.Tracer;
-import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Named;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
@@ -30,12 +28,14 @@ import java.util.Optional;
  * gRPC client interceptor to manually inject trace headers into outgoing gRPC calls.
  * Based on Helidon's GrpcClientTracingInterceptor implementation.
  */
-@ApplicationScoped
-@Priority(1)
-@Slf4j
-@Named("traceInterceptor")
 @Grpc.GrpcInterceptor
+@ApplicationScoped
+@Slf4j
 public class TracePropagationClientInterceptor implements ClientInterceptor {
+
+    public TracePropagationClientInterceptor() {
+        log.info(">>>> [CLIENT INTERCEPTOR] TracePropagationClientInterceptor constructor called");
+    }
 
     @Override
     public <ReqT, RespT> ClientCall<ReqT, RespT> interceptCall(
