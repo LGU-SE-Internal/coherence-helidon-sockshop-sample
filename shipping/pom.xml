@@ -339,7 +339,7 @@
                         <version>${version.plugin.jib}</version>
                         <configuration>
                             <from>
-                                <image>gcr.io/distroless/java21-debian12</image>
+                                <image>gcr.io/distroless/java25-debian12</image>
                             </from>
                             <to>
                                 <image>${docker.registry.url}/${docker.registry.name}/ss-${project.artifactId}</image>
