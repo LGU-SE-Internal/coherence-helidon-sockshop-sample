@@ -11,9 +11,9 @@ import io.grpc.CallOptions;
 import io.grpc.Channel;
 import io.grpc.ClientCall;
 import io.grpc.ClientInterceptor;
-import io.grpc.ForwardingClientCall;
 import io.grpc.Metadata;
 import io.grpc.MethodDescriptor;
+import io.grpc.stub.MetadataUtils;
 import io.helidon.tracing.Span;
 import io.helidon.tracing.HeaderConsumer;
 import io.helidon.tracing.Tracer;
@@ -25,8 +25,7 @@ import java.util.Optional;
 
 /**
  * gRPC client interceptor to manually inject trace headers into outgoing gRPC calls.
- * This interceptor extracts the current trace context from Helidon's tracer and
- * injects it as metadata headers for downstream services.
+ * Uses MetadataUtils pattern to attach headers to requests.
  */
 @ApplicationScoped
 @Priority(1)
@@ -37,6 +36,35 @@ public class TracePropagationClientInterceptor implements ClientInterceptor {
             Metadata.Key.of("traceparent", Metadata.ASCII_STRING_MARSHALLER);
     
     private static final java.util.Map<String, java.util.List<String>> EMPTY_MAP = java.util.Collections.emptyMap();
+    
+    private final ClientInterceptor attachHeadersInterceptor;
+    
+    public TracePropagationClientInterceptor() {
+        // Create metadata with trace headers
+        Metadata metadata = createMetadataWithTraceHeaders();
+        // Use MetadataUtils to create the interceptor
+        this.attachHeadersInterceptor = MetadataUtils.newAttachHeadersInterceptor(metadata);
+    }
+    
+    private Metadata createMetadataWithTraceHeaders() {
+        Metadata metadata = new Metadata();
+        
+        // Extract traceparent from current span if available
+        Optional<Span> currentSpan = Span.current();
+        if (currentSpan.isPresent()) {
+            HeaderConsumer consumer = HeaderConsumer.create(EMPTY_MAP);
+            Tracer.global().inject(currentSpan.get().context(), null, consumer);
+            
+            consumer.get("traceparent").ifPresent(tp -> {
+                metadata.put(TRACEPARENT_KEY, tp);
+                log.debug(">>>> [CLIENT INTERCEPTOR] Creating metadata with traceparent: {}", tp);
+            });
+        } else {
+            log.debug(">>>> [CLIENT INTERCEPTOR] No current span available");
+        }
+        
+        return metadata;
+    }
 
     @Override
     public <ReqT, RespT> ClientCall<ReqT, RespT> interceptCall(
@@ -44,29 +72,11 @@ public class TracePropagationClientInterceptor implements ClientInterceptor {
             CallOptions callOptions,
             Channel next) {
         
-        return new ForwardingClientCall.SimpleForwardingClientCall<ReqT, RespT>(
-                next.newCall(method, callOptions)) {
-            
-            @Override
-            public void start(Listener<RespT> responseListener, Metadata headers) {
-                // Extract traceparent from current span if available
-                Optional<Span> currentSpan = Span.current();
-                if (currentSpan.isPresent()) {
-                    HeaderConsumer consumer = HeaderConsumer.create(EMPTY_MAP);
-                    Tracer.global().inject(currentSpan.get().context(), null, consumer);
-                    
-                    consumer.get("traceparent").ifPresent(tp -> {
-                        headers.put(TRACEPARENT_KEY, tp);
-                        log.debug(">>>> [CLIENT INTERCEPTOR] Injecting traceparent to gRPC call {}: {}", 
-                                method.getFullMethodName(), tp);
-                    });
-                } else {
-                    log.debug(">>>> [CLIENT INTERCEPTOR] No current span available for gRPC call {}", 
-                            method.getFullMethodName());
-                }
-                
-                super.start(responseListener, headers);
-            }
-        };
+        // Recreate metadata for each call to get current trace context
+        Metadata metadata = createMetadataWithTraceHeaders();
+        ClientInterceptor interceptor = MetadataUtils.newAttachHeadersInterceptor(metadata);
+        
+        return interceptor.interceptCall(method, callOptions, next);
     }
 }
+
