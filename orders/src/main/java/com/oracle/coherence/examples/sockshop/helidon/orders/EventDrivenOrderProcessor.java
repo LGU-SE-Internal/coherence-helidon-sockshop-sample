@@ -191,6 +191,14 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
                 }
                 
                 @Override
+                public Iterable<String> getAll(String key) {
+                    if ("traceparent".equalsIgnoreCase(key)) {
+                        return java.util.List.of(finalTraceParent);
+                    }
+                    return java.util.List.of();
+                }
+                
+                @Override
                 public boolean contains(String key) {
                     return "traceparent".equalsIgnoreCase(key);
                 }
