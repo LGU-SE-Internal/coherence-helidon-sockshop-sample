@@ -97,42 +97,57 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
      */
     @WithSpan
     protected void processPayment(Order order) {
-        Tracer helidonTracer = Tracer.global();
-        Optional<Span> currentSpan = Span.current();
+        // 1. Extract current trace information from Helidon
+        java.util.Map<String, java.util.List<String>> traceHeadersMultiValue = new java.util.HashMap<>();
+        Span.current().ifPresent(span -> 
+            Tracer.global().inject(span.context(), null, io.helidon.tracing.HeaderConsumer.create(traceHeadersMultiValue))
+        );
+
+        // 2. Convert multi-value headers to single-value map for gRPC
+        java.util.Map<String, String> traceHeaders = new java.util.HashMap<>();
+        traceHeadersMultiValue.forEach((key, values) -> {
+            if (values != null && !values.isEmpty()) {
+                traceHeaders.put(key, values.get(0));
+            }
+        });
+
+        // 3. Set trace headers in ThreadLocal for the interceptor to pick up
+        TracePropagationInterceptor.setTraceHeaders(traceHeaders);
         
-        log.info(">>>> [DIAGNOSTIC] Helidon Tracer Type: {}", helidonTracer.getClass().getName());
-        log.info(">>>> [DIAGNOSTIC] Current Span Active: {}", currentSpan.isPresent());
-        currentSpan.ifPresent(s -> log.info(">>>> [DIAGNOSTIC] TraceID before gRPC: {}", s.context().traceId()));
-        io.helidon.tracing.HeaderConsumer consumer = io.helidon.tracing.HeaderConsumer.create(new java.util.HashMap<>());
-        io.helidon.tracing.Tracer.global().inject(io.helidon.tracing.Span.current().get().context(), null, consumer);
+        log.info(">>>> [MANUAL SEND] Sending order {} with traceparent {}", 
+                 order.getOrderId(), traceHeaders.get("traceparent"));
 
-        // 打印出 Helidon 准备发往网线的 Header 字符串
-        log.warn(">>>> [WIRE CHECK] Helidon is injecting traceparent: {}", consumer.get("traceparent").orElse("NOT_FOUND"));
-        PaymentRequest paymentRequest = PaymentRequest.builder()
-                .orderId(order.getOrderId())
-                .customer(order.getCustomer())
-                .address(order.getAddress())
-                .card(order.getCard())
-                .amount(order.getTotal())
-                .build();
-
-        log.info("Processing Payment: " + paymentRequest);
-        Payment payment = paymentService.authorize(paymentRequest);
-        if (payment == null) {
-            payment = Payment.builder()
-                    .authorised(false)
-                    .message("Unable to parse authorization packet")
+        try {
+            PaymentRequest paymentRequest = PaymentRequest.builder()
+                    .orderId(order.getOrderId())
+                    .customer(order.getCustomer())
+                    .address(order.getAddress())
+                    .card(order.getCard())
+                    .amount(order.getTotal())
                     .build();
-        }
-        log.info("Payment processed: " + payment);
 
-        order.setPayment(payment);
-        if (!payment.isAuthorised()) {
-            order.setStatus(PAYMENT_FAILED);
-            throw new PaymentDeclinedException(payment.getMessage());
-        }
+            log.info("Processing Payment: " + paymentRequest);
+            Payment payment = paymentService.authorize(paymentRequest);
+            
+            if (payment == null) {
+                payment = Payment.builder()
+                        .authorised(false)
+                        .message("Unable to parse authorization packet")
+                        .build();
+            }
+            log.info("Payment processed: " + payment);
 
-        order.setStatus(PAID);
+            order.setPayment(payment);
+            if (!payment.isAuthorised()) {
+                order.setStatus(PAYMENT_FAILED);
+                throw new PaymentDeclinedException(payment.getMessage());
+            }
+
+            order.setStatus(PAID);
+        } finally {
+            // 4. Always clear ThreadLocal to prevent memory leaks
+            TracePropagationInterceptor.clearTraceHeaders();
+        }
     }
 
     /**
@@ -142,30 +157,44 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
      */
     @WithSpan
     protected void shipOrder(Order order) {
-        Tracer helidonTracer = Tracer.global();
-        Optional<Span> currentSpan = Span.current();
+        // 1. Extract current trace information from Helidon
+        java.util.Map<String, java.util.List<String>> traceHeadersMultiValue = new java.util.HashMap<>();
+        Span.current().ifPresent(span -> 
+            Tracer.global().inject(span.context(), null, io.helidon.tracing.HeaderConsumer.create(traceHeadersMultiValue))
+        );
+
+        // 2. Convert multi-value headers to single-value map for gRPC
+        java.util.Map<String, String> traceHeaders = new java.util.HashMap<>();
+        traceHeadersMultiValue.forEach((key, values) -> {
+            if (values != null && !values.isEmpty()) {
+                traceHeaders.put(key, values.get(0));
+            }
+        });
+
+        // 3. Set trace headers in ThreadLocal for the interceptor to pick up
+        TracePropagationInterceptor.setTraceHeaders(traceHeaders);
         
-        log.info(">>>> [DIAGNOSTIC] Helidon Tracer Type: {}", helidonTracer.getClass().getName());
-        log.info(">>>> [DIAGNOSTIC] Current Span Active: {}", currentSpan.isPresent());
-        currentSpan.ifPresent(s -> log.info(">>>> [DIAGNOSTIC] TraceID before gRPC: {}", s.context().traceId()));
-        io.helidon.tracing.HeaderConsumer consumer = io.helidon.tracing.HeaderConsumer.create(new java.util.HashMap<>());
-        io.helidon.tracing.Tracer.global().inject(io.helidon.tracing.Span.current().get().context(), null, consumer);
+        log.info(">>>> [MANUAL SEND] Sending order {} with traceparent {}", 
+                 order.getOrderId(), traceHeaders.get("traceparent"));
 
-        // 打印出 Helidon 准备发往网线的 Header 字符串
-        log.warn(">>>> [WIRE CHECK] Helidon is injecting traceparent: {}", consumer.get("traceparent").orElse("NOT_FOUND"));
-        ShippingRequest shippingRequest = ShippingRequest.builder()
-                .orderId(order.getOrderId())
-                .customer(order.getCustomer())
-                .address(order.getAddress())
-                .itemCount(order.getItems().size())
-                .build();
+        try {
+            ShippingRequest shippingRequest = ShippingRequest.builder()
+                    .orderId(order.getOrderId())
+                    .customer(order.getCustomer())
+                    .address(order.getAddress())
+                    .itemCount(order.getItems().size())
+                    .build();
 
-        log.info("Creating Shipment: " + shippingRequest);
-        Shipment shipment = shippingService.ship(shippingRequest);
-        log.info("Created Shipment: " + shipment);
+            log.info("Creating Shipment: " + shippingRequest);
+            Shipment shipment = shippingService.ship(shippingRequest);
+            log.info("Created Shipment: " + shipment);
 
-        order.setShipment(shipment);
-        order.setStatus(SHIPPED);
+            order.setShipment(shipment);
+            order.setStatus(SHIPPED);
+        } finally {
+            // 4. Always clear ThreadLocal to prevent memory leaks
+            TracePropagationInterceptor.clearTraceHeaders();
+        }
     }
 
     // ---- helper methods --------------------------------------------------
