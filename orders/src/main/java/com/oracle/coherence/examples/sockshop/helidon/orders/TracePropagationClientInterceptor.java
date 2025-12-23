@@ -18,10 +18,10 @@ import io.helidon.grpc.api.Grpc;
 import io.helidon.tracing.HeaderConsumer;
 import io.helidon.tracing.Span;
 import io.helidon.tracing.Tracer;
-import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.logging.Logger;
 
 /**
  * gRPC client interceptor to manually inject trace headers into outgoing gRPC calls.
@@ -30,11 +30,12 @@ import java.util.Optional;
  * Note: This class is instantiated via InterceptorProducer CDI producer.
  */
 @Grpc.GrpcInterceptor
-@Slf4j
 public class TracePropagationClientInterceptor implements ClientInterceptor {
 
+    private static final Logger LOGGER = Logger.getLogger(TracePropagationClientInterceptor.class.getName());
+
     public TracePropagationClientInterceptor() {
-        log.info(">>>> [CLIENT INTERCEPTOR] TracePropagationClientInterceptor constructor called");
+        LOGGER.info(">>>> [CLIENT INTERCEPTOR] TracePropagationClientInterceptor constructor called");
     }
 
     @Override
@@ -43,28 +44,28 @@ public class TracePropagationClientInterceptor implements ClientInterceptor {
             CallOptions callOptions,
             Channel next) {
         
-        log.info(">>>> [CLIENT INTERCEPTOR] interceptCall invoked for method: {}", method.getFullMethodName());
+        LOGGER.info(">>>> [CLIENT INTERCEPTOR] interceptCall invoked for method: " + method.getFullMethodName());
         
         ClientCall<ReqT, RespT> call = next.newCall(method, callOptions);
         return new ForwardingClientCall.SimpleForwardingClientCall<ReqT, RespT>(call) {
             
             @Override
             public void start(Listener<RespT> responseListener, Metadata headers) {
-                log.info(">>>> [CLIENT INTERCEPTOR] start() called, injecting trace headers");
-                log.info(">>>> [CLIENT INTERCEPTOR] Before injection, metadata keys: {}", headers.keys());
+                LOGGER.info(">>>> [CLIENT INTERCEPTOR] start() called, injecting trace headers");
+                LOGGER.info(">>>> [CLIENT INTERCEPTOR] Before injection, metadata keys: " + headers.keys());
                 
                 try {
                     // Get current span and inject trace context into metadata
                     Optional<Span> currentSpan = Span.current();
                     if (currentSpan.isPresent()) {
-                        log.info(">>>> [CLIENT INTERCEPTOR] Current span found, injecting context");
+                        LOGGER.info(">>>> [CLIENT INTERCEPTOR] Current span found, injecting context");
                         Tracer.global().inject(currentSpan.get().context(), null, new GrpcHeaderConsumer(headers));
-                        log.info(">>>> [CLIENT INTERCEPTOR] After injection, metadata keys: {}", headers.keys());
+                        LOGGER.info(">>>> [CLIENT INTERCEPTOR] After injection, metadata keys: " + headers.keys());
                     } else {
-                        log.warn(">>>> [CLIENT INTERCEPTOR] No current span available");
+                        LOGGER.warning(">>>> [CLIENT INTERCEPTOR] No current span available");
                     }
                 } catch (Exception e) {
-                    log.error(">>>> [CLIENT INTERCEPTOR] Error injecting trace context", e);
+                    LOGGER.severe(">>>> [CLIENT INTERCEPTOR] Error injecting trace context: " + e.getMessage());
                 }
                 
                 super.start(responseListener, headers);

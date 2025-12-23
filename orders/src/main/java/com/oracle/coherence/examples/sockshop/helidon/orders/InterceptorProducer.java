@@ -7,8 +7,6 @@
 
 package com.oracle.coherence.examples.sockshop.helidon.orders;
 
-import io.helidon.common.Weight;
-import io.helidon.common.Weighted;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
 
@@ -25,7 +23,6 @@ public class InterceptorProducer {
 
     @Produces
     @ApplicationScoped
-    @Weight(Weighted.DEFAULT_WEIGHT + 10) // Increase weight for higher priority
     public TracePropagationClientInterceptor tracingInterceptor() {
         LOGGER.info(">>>> [INTERCEPTOR PRODUCER] Creating TracePropagationClientInterceptor bean");
         return new TracePropagationClientInterceptor();
