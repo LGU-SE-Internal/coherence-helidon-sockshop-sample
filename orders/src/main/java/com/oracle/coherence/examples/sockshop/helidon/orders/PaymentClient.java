@@ -12,6 +12,7 @@ import io.helidon.grpc.api.Grpc;
 @Grpc.GrpcService("PaymentGrpc")
 @Grpc.GrpcChannel("payment")
 @Grpc.GrpcMarshaller("jsonb")
+@Grpc.GrpcInterceptors(GrpcClientTracingBridge.class)
 public interface PaymentClient {
    @Grpc.Unary
    Payment authorize(PaymentRequest request);

@@ -12,6 +12,7 @@ import io.helidon.grpc.api.Grpc;
 @Grpc.GrpcService("ShippingGrpc")
 @Grpc.GrpcChannel("shipping")
 @Grpc.GrpcMarshaller("jsonb")
+@Grpc.GrpcInterceptors(GrpcClientTracingBridge.class)
 public interface ShippingClient {
     @Grpc.Unary
     Shipment ship(ShippingRequest request);
