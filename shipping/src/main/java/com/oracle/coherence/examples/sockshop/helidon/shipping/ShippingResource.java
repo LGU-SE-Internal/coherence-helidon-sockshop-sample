@@ -128,6 +128,11 @@ public class ShippingResource implements ShippingApi {
         } catch (Exception e) {
             log.error("Error creating shipment", e);
             serverSpan.status(io.helidon.tracing.Span.Status.ERROR);
+            serverSpan.addEvent("exception", 
+                java.util.Map.of(
+                    "exception.type", e.getClass().getName(),
+                    "exception.message", e.getMessage() != null ? e.getMessage() : ""
+                ));
             throw e;
         } finally {
             serverSpan.end();
