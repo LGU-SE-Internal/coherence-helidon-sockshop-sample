@@ -30,11 +30,6 @@
         <jib.goal>dockerBuild</jib.goal>
         <coherence.group.id>com.oracle.coherence.ce</coherence.group.id>
 
-        <!-- java version -->
-        <maven.compiler.release>25</maven.compiler.release>
-        <maven.compiler.source>25</maven.compiler.source>
-        <maven.compiler.target>25</maven.compiler.target>
-
         <!-- dependencies -->
         <version.lib.coherence>25.03.2</version.lib.coherence>
         <version.lib.lombok>1.18.38</version.lib.lombok>
@@ -349,7 +344,7 @@
                         <version>${version.plugin.jib}</version>
                         <configuration>
                             <from>
-                                <image>gcr.io/distroless/java25-debian13</image>
+                                <image>gcr.io/distroless/java21-debian12</image>
                             </from>
                             <to>
                                 <image>${docker.registry.url}/${docker.registry.name}/ss-${project.artifactId}</image>
