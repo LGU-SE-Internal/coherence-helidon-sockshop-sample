@@ -19,7 +19,7 @@ coherence:
   proxy:
     enabled: false
   tracing:
-    ratio: -1
+    ratio: 1.0
 otel:  
   service:
     name: Shipping
