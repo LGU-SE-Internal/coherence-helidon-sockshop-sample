@@ -97,23 +97,24 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
      */
     @WithSpan
     protected void processPayment(Order order) {
-        Tracer helidonTracer = Tracer.global();
-        Optional<Span> currentSpan = Span.current();
-        
-        log.info(">>>> [DIAGNOSTIC] Helidon Tracer Type: {}", helidonTracer.getClass().getName());
-        log.info(">>>> [DIAGNOSTIC] Current Span Active: {}", currentSpan.isPresent());
-        currentSpan.ifPresent(s -> log.info(">>>> [DIAGNOSTIC] TraceID before gRPC: {}", s.context().traceId()));
-        io.helidon.tracing.HeaderConsumer consumer = io.helidon.tracing.HeaderConsumer.create(new java.util.HashMap<>());
-        io.helidon.tracing.Tracer.global().inject(io.helidon.tracing.Span.current().get().context(), null, consumer);
+        // Extract current traceparent string from order or current span
+        String currentTp = order.getTraceParent();
+        if (currentTp == null) {
+            // Fallback: extract from current span
+            io.helidon.tracing.HeaderConsumer consumer = io.helidon.tracing.HeaderConsumer.create(new java.util.HashMap<>());
+            io.helidon.tracing.Tracer.global().inject(io.helidon.tracing.Span.current().get().context(), null, consumer);
+            currentTp = consumer.get("traceparent").orElse(null);
+        }
 
-        // 打印出 Helidon 准备发往网线的 Header 字符串
-        log.warn(">>>> [WIRE CHECK] Helidon is injecting traceparent: {}", consumer.get("traceparent").orElse("NOT_FOUND"));
+        log.info(">>>> [RELAY SEND] Sending payment with Trace: {}", currentTp);
+        
         PaymentRequest paymentRequest = PaymentRequest.builder()
                 .orderId(order.getOrderId())
                 .customer(order.getCustomer())
                 .address(order.getAddress())
                 .card(order.getCard())
                 .amount(order.getTotal())
+                .traceParent(currentTp)  // Explicitly pass trace context via business field
                 .build();
 
         log.info("Processing Payment: " + paymentRequest);
@@ -142,22 +143,23 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
      */
     @WithSpan
     protected void shipOrder(Order order) {
-        Tracer helidonTracer = Tracer.global();
-        Optional<Span> currentSpan = Span.current();
-        
-        log.info(">>>> [DIAGNOSTIC] Helidon Tracer Type: {}", helidonTracer.getClass().getName());
-        log.info(">>>> [DIAGNOSTIC] Current Span Active: {}", currentSpan.isPresent());
-        currentSpan.ifPresent(s -> log.info(">>>> [DIAGNOSTIC] TraceID before gRPC: {}", s.context().traceId()));
-        io.helidon.tracing.HeaderConsumer consumer = io.helidon.tracing.HeaderConsumer.create(new java.util.HashMap<>());
-        io.helidon.tracing.Tracer.global().inject(io.helidon.tracing.Span.current().get().context(), null, consumer);
+        // Extract current traceparent string from order or current span
+        String currentTp = order.getTraceParent();
+        if (currentTp == null) {
+            // Fallback: extract from current span
+            io.helidon.tracing.HeaderConsumer consumer = io.helidon.tracing.HeaderConsumer.create(new java.util.HashMap<>());
+            io.helidon.tracing.Tracer.global().inject(io.helidon.tracing.Span.current().get().context(), null, consumer);
+            currentTp = consumer.get("traceparent").orElse(null);
+        }
 
-        // 打印出 Helidon 准备发往网线的 Header 字符串
-        log.warn(">>>> [WIRE CHECK] Helidon is injecting traceparent: {}", consumer.get("traceparent").orElse("NOT_FOUND"));
+        log.info(">>>> [RELAY SEND] Sending with Trace: {}", currentTp);
+        
         ShippingRequest shippingRequest = ShippingRequest.builder()
                 .orderId(order.getOrderId())
                 .customer(order.getCustomer())
                 .address(order.getAddress())
                 .itemCount(order.getItems().size())
+                .traceParent(currentTp)  // Explicitly pass trace context via business field
                 .build();
 
         log.info("Creating Shipment: " + shippingRequest);
