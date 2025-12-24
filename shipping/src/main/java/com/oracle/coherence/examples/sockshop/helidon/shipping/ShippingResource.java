@@ -131,7 +131,7 @@ public class ShippingResource implements ShippingApi {
             serverSpan.addEvent("exception", 
                 java.util.Map.of(
                     "exception.type", e.getClass().getName(),
-                    "exception.message", e.getMessage() != null ? e.getMessage() : ""
+                    "exception.message", e.getMessage() != null ? e.getMessage() : "No message available"
                 ));
             throw e;
         } finally {
