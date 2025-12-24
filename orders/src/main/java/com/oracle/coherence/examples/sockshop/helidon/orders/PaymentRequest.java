@@ -46,4 +46,11 @@ public class PaymentRequest {
      */
     @Schema(description = "Payment amount")
     private float amount;
+
+    /**
+     * W3C traceparent header for trace propagation.
+     * This field carries trace context as business payload to bypass protocol-level propagation issues.
+     */
+    @Schema(description = "W3C traceparent header for trace propagation")
+    private String traceParent;
 }
