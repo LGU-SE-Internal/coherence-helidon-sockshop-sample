@@ -38,4 +38,10 @@ public class ShippingRequest implements Serializable {
      * The number of items in the order.
      */
     private int itemCount;
+
+    /**
+     * W3C traceparent header for trace propagation.
+     * This field carries trace context as business payload to bypass protocol-level propagation issues.
+     */
+    private String traceParent;
 }

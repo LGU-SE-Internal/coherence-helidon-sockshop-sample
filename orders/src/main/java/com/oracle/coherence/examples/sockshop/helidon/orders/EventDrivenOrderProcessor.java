@@ -8,13 +8,10 @@
 package com.oracle.coherence.examples.sockshop.helidon.orders;
 
 import io.helidon.grpc.api.Grpc;
-import io.opentelemetry.api.GlobalOpenTelemetry;
-import io.opentelemetry.api.trace.Span;
-import io.opentelemetry.api.trace.SpanKind;
-import io.opentelemetry.api.trace.StatusCode;
-import io.opentelemetry.api.trace.Tracer;
-import io.opentelemetry.context.Context;
-import io.opentelemetry.context.Scope;
+import io.helidon.tracing.Span;
+import io.helidon.tracing.Tracer;
+import io.helidon.tracing.Scope;
+import io.helidon.tracing.HeaderProvider;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.ObservesAsync;
@@ -26,6 +23,8 @@ import com.oracle.coherence.cdi.events.Updated;
 import com.tangosol.net.events.partition.cache.EntryEvent;
 
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.Optional;
 
 import static com.oracle.coherence.examples.sockshop.helidon.orders.Order.Status.PAID;
 import static com.oracle.coherence.examples.sockshop.helidon.orders.Order.Status.PAYMENT_FAILED;
@@ -98,12 +97,24 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
      */
     @WithSpan
     protected void processPayment(Order order) {
+        // Extract current traceparent string from order or current span
+        String currentTp = order.getTraceParent();
+        if (currentTp == null) {
+            // Fallback: extract from current span
+            io.helidon.tracing.HeaderConsumer consumer = io.helidon.tracing.HeaderConsumer.create(new java.util.HashMap<>());
+            io.helidon.tracing.Tracer.global().inject(io.helidon.tracing.Span.current().get().context(), null, consumer);
+            currentTp = consumer.get("traceparent").orElse(null);
+        }
+
+        log.info(">>>> [RELAY SEND] Sending payment with Trace: {}", currentTp);
+        
         PaymentRequest paymentRequest = PaymentRequest.builder()
                 .orderId(order.getOrderId())
                 .customer(order.getCustomer())
                 .address(order.getAddress())
                 .card(order.getCard())
                 .amount(order.getTotal())
+                .traceParent(currentTp)  // Explicitly pass trace context via business field
                 .build();
 
         log.info("Processing Payment: " + paymentRequest);
@@ -132,11 +143,23 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
      */
     @WithSpan
     protected void shipOrder(Order order) {
+        // Extract current traceparent string from order or current span
+        String currentTp = order.getTraceParent();
+        if (currentTp == null) {
+            // Fallback: extract from current span
+            io.helidon.tracing.HeaderConsumer consumer = io.helidon.tracing.HeaderConsumer.create(new java.util.HashMap<>());
+            io.helidon.tracing.Tracer.global().inject(io.helidon.tracing.Span.current().get().context(), null, consumer);
+            currentTp = consumer.get("traceparent").orElse(null);
+        }
+
+        log.info(">>>> [RELAY SEND] Sending with Trace: {}", currentTp);
+        
         ShippingRequest shippingRequest = ShippingRequest.builder()
                 .orderId(order.getOrderId())
                 .customer(order.getCustomer())
                 .address(order.getAddress())
                 .itemCount(order.getItems().size())
+                .traceParent(currentTp)  // Explicitly pass trace context via business field
                 .build();
 
         log.info("Creating Shipment: " + shippingRequest);
@@ -162,28 +185,70 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
         Order order = event.getValue();
         String traceParent = order.getTraceParent();
         
-        // Extract parent context from order
-        Context parentContext = TraceUtils.extractContext(traceParent);
-        
         if (TraceUtils.hasTraceContext(traceParent)) {
-            log.info("Extracted trace context for order {}: {}", 
+            log.info("Processing order with trace context {}: {}", 
                      order.getOrderId(), traceParent);
         } else {
             log.warn("No trace context found for order {}, creating new trace", order.getOrderId());
         }
         
-        // Create a new span as child of the restored context
-        Tracer tracer = GlobalOpenTelemetry.getTracer("orders-async");
-        Span asyncSpan = tracer.spanBuilder("process-order-event")
-                .setParent(parentContext)
-                .setSpanKind(SpanKind.INTERNAL)
-                .setAttribute("order.id", order.getOrderId())
-                .setAttribute("order.status", order.getStatus().toString())
-                .startSpan();
+        // Get Helidon's global tracer
+        Tracer tracer = Tracer.global();
         
-        try (Scope scope = asyncSpan.makeCurrent()) {
-            log.info("Processing order event for order: {} with status: {} (traceId: {})", 
-                     order.getOrderId(), order.getStatus(), asyncSpan.getSpanContext().getTraceId());
+        // Extract parent context using Helidon's built-in parser
+        Optional<io.helidon.tracing.SpanContext> parentContext = Optional.empty();
+        if (TraceUtils.hasTraceContext(traceParent)) {
+            // Create a HeaderProvider that provides the traceparent header
+            final String finalTraceParent = traceParent;
+            HeaderProvider headerProvider = new HeaderProvider() {
+                @Override
+                public Iterable<String> keys() {
+                    return java.util.List.of("traceparent");
+                }
+                
+                @Override
+                public Optional<String> get(String key) {
+                    if ("traceparent".equalsIgnoreCase(key)) {
+                        return Optional.of(finalTraceParent);
+                    }
+                    return Optional.empty();
+                }
+                
+                @Override
+                public Iterable<String> getAll(String key) {
+                    if ("traceparent".equalsIgnoreCase(key)) {
+                        return java.util.List.of(finalTraceParent);
+                    }
+                    return java.util.List.of();
+                }
+                
+                @Override
+                public boolean contains(String key) {
+                    return "traceparent".equalsIgnoreCase(key);
+                }
+            };
+            
+            // Use Helidon's extract method to parse the traceparent
+            parentContext = tracer.extract(headerProvider);
+            if (parentContext.isPresent()) {
+                log.info("Extracted parent context for order {}: traceId={}", 
+                         order.getOrderId(), parentContext.get().traceId());
+            }
+        }
+        
+        // Create a span using Helidon API with explicit parent context
+        Span.Builder<?> spanBuilder = tracer.spanBuilder("process-order-event")
+                .tag("order.id", order.getOrderId())
+                .tag("order.status", order.getStatus().toString());
+        
+        // Explicitly set parent context if available
+        parentContext.ifPresent(spanBuilder::parent);
+        
+        Span asyncSpan = spanBuilder.start();
+        
+        try (Scope scope = asyncSpan.activate()) {
+            log.info("Processing order event for order: {} with status: {}", 
+                     order.getOrderId(), order.getStatus());
             
             // Save original trace context to propagate to next async event
             String originalTraceParent = traceParent;
@@ -215,11 +280,10 @@ public class EventDrivenOrderProcessor implements OrderProcessor {
                 // do nothing, order is in a terminal state already
             }
             
-            asyncSpan.setStatus(StatusCode.OK);
+            asyncSpan.status(Span.Status.OK);
         } catch (Exception e) {
             log.error("Error processing order event for order: " + order.getOrderId(), e);
-            asyncSpan.recordException(e);
-            asyncSpan.setStatus(StatusCode.ERROR, e.getMessage());
+            asyncSpan.status(Span.Status.ERROR);
             throw e;
         } finally {
             asyncSpan.end();

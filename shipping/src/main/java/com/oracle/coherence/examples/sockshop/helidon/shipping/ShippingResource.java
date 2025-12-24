@@ -26,6 +26,7 @@ import org.eclipse.microprofile.metrics.annotation.Timed;
 @Path("/shipping")
 @Grpc.GrpcService("ShippingGrpc")
 @Grpc.GrpcMarshaller("jsonb")
+@Grpc.GrpcInterceptors(MetadataLogger.class)
 @Timed
 @Slf4j
 public class ShippingResource implements ShippingApi {
@@ -50,37 +51,91 @@ public class ShippingResource implements ShippingApi {
     @Override
     @Grpc.Unary
     public Shipment ship(ShippingRequest req) {
-        String orderId = req.getOrderId();
-        int itemCount = req.getItemCount();
-        log.info("Creating shipment for order: " + orderId + ", items: " + itemCount);
+        String tp = req.getTraceParent();
+        log.info(">>>> [RELAY RECEIVE] Received Trace: {}", tp);
 
-        // defaults
-        String carrier = "USPS";
-        String trackingNumber = "9205 5000 0000 0000 0000 00";
-        LocalDate deliveryDate = LocalDate.now().plusDays(5);
+        io.helidon.tracing.Tracer tracer = io.helidon.tracing.Tracer.global();
+        io.helidon.tracing.Span.Builder<?> spanBuilder = tracer.spanBuilder("ShippingGrpc/ship")
+                .kind(io.helidon.tracing.Span.Kind.SERVER);
 
-        if (itemCount == 1) {  // use FedEx
-            carrier = "FEDEX";
-            trackingNumber = "231300687629630";
-            deliveryDate = LocalDate.now().plusDays(1);
+        // Use HeaderProvider to extract parent context from traceParent field
+        if (tp != null && !tp.isEmpty()) {
+            io.helidon.tracing.HeaderProvider hp = new io.helidon.tracing.HeaderProvider() {
+                @Override 
+                public java.util.Optional<String> get(String key) { 
+                    return "traceparent".equals(key) ? java.util.Optional.of(tp) : java.util.Optional.empty(); 
+                }
+                
+                @Override 
+                public Iterable<String> keys() { 
+                    return java.util.List.of("traceparent"); 
+                }
+                
+                @Override
+                public Iterable<String> getAll(String key) {
+                    if ("traceparent".equals(key)) {
+                        return java.util.List.of(tp);
+                    }
+                    return java.util.List.of();
+                }
+                
+                @Override 
+                public boolean contains(String key) { 
+                    return "traceparent".equals(key); 
+                }
+            };
+            
+            // Force parent context linkage
+            tracer.extract(hp).ifPresent(spanBuilder::parent);
         }
-        else if (itemCount <= 3) {  // use UPS
-            carrier = "UPS";
-            trackingNumber = "1Z999AA10123456784";
-            deliveryDate = LocalDate.now().plusDays(3);
+
+        io.helidon.tracing.Span serverSpan = spanBuilder.start();
+        try (io.helidon.tracing.Scope scope = serverSpan.activate()) {
+            // Execute business logic within traced context
+            String orderId = req.getOrderId();
+            int itemCount = req.getItemCount();
+            log.info("Creating shipment for order: " + orderId + ", items: " + itemCount);
+
+            // defaults
+            String carrier = "USPS";
+            String trackingNumber = "9205 5000 0000 0000 0000 00";
+            LocalDate deliveryDate = LocalDate.now().plusDays(5);
+
+            if (itemCount == 1) {  // use FedEx
+                carrier = "FEDEX";
+                trackingNumber = "231300687629630";
+                deliveryDate = LocalDate.now().plusDays(1);
+            }
+            else if (itemCount <= 3) {  // use UPS
+                carrier = "UPS";
+                trackingNumber = "1Z999AA10123456784";
+                deliveryDate = LocalDate.now().plusDays(3);
+            }
+
+            Shipment shipment = Shipment.builder()
+                    .orderId(orderId)
+                    .carrier(carrier)
+                    .trackingNumber(trackingNumber)
+                    .deliveryDate(deliveryDate)
+                    .build();
+
+            shipments.saveShipment(shipment);
+
+            log.info("Shipment created for order: " + orderId + ", carrier: " + carrier + ", tracking: " + trackingNumber);
+
+            serverSpan.status(io.helidon.tracing.Span.Status.OK);
+            return shipment;
+        } catch (Exception e) {
+            log.error("Error creating shipment", e);
+            serverSpan.status(io.helidon.tracing.Span.Status.ERROR);
+            serverSpan.addEvent("exception", 
+                java.util.Map.of(
+                    "exception.type", e.getClass().getName(),
+                    "exception.message", e.getMessage() != null ? e.getMessage() : "No message available"
+                ));
+            throw e;
+        } finally {
+            serverSpan.end();
         }
-
-        Shipment shipment = Shipment.builder()
-                .orderId(orderId)
-                .carrier(carrier)
-                .trackingNumber(trackingNumber)
-                .deliveryDate(deliveryDate)
-                .build();
-
-        shipments.saveShipment(shipment);
-
-        log.info("Shipment created for order: " + orderId + ", carrier: " + carrier + ", tracking: " + trackingNumber);
-
-        return shipment;
     }
 }

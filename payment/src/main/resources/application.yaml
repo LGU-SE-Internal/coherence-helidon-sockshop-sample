@@ -5,6 +5,9 @@
 # https://oss.oracle.com/licenses/upl.
 #
 grpc:
+  grpc-services:
+    tracing:
+      enabled: true
   client:
     channels:
       - name: "default"
@@ -16,21 +19,10 @@ coherence:
   proxy:
     enabled: false
   tracing:
-    ratio: -1
-otel:
-  sdk:
-    disabled: false
+    ratio: 1.0
+otel:  
   service:
-    name: Orders
-  traces:
-    exporter: otlp
-  logs:
-    exporter: otlp
+    name: Payment
   agent:
     present: true
-  exporter:
-    otlp:
-      traces:
-        endpoint: http://opentelemetry-kube-stack-deployment-collector.monitoring:4317
-      logs:
-        endpoint: http://opentelemetry-kube-stack-deployment-collector.monitoring:4317
+

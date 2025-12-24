@@ -25,6 +25,17 @@ spec:
   coherence:
     metrics:
       enabled: {{ .Values.coherence.metrics.enabled }}
+  env:
+    - name: OTEL_JAVA_GLOBAL_AUTOCONFIGURE_ENABLED
+      value: "true"
+    - name: OTEL_INSTRUMENTATION_GRPC_ENABLED
+      value: "false"
+    - name: OTEL_JAVAAGENT_DEBUG
+      value: "true"
+    - name: GRPC_TRACE
+      value: "all" # 追踪所有信息
+    - name: GRPC_VERBOSITY
+      value: "DEBUG" # 开启调试级别
   ports:
     - name: http
       port: 7001
