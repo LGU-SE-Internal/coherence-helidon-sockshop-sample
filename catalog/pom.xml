@@ -21,9 +21,10 @@
     <groupId>com.oracle.coherence.examples.sockshop.helidon</groupId>
     <artifactId>catalog</artifactId>
     <packaging>jar</packaging>
-    <version>2.11.0</version>
+    <version>${sockshop.version}</version>
 
     <properties>
+        <sockshop.version>2.11.0</sockshop.version>
         <mainClass>com.oracle.coherence.examples.sockshop.helidon.catalog.Application</mainClass>
         <container.repo>ghcr.io/oracle/coherence-helidon-sockshop</container.repo>
         <container.version>${project.version}</container.version>

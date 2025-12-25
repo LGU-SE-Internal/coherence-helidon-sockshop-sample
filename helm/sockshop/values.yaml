@@ -6,6 +6,8 @@
 global:
   # Docker image registry
   imageRegistry: "10.10.10.240/library"
+  # Global image tag - applies to all backend services unless overridden
+  imageTag: "2.11.0"
   # Image pull policy
   imagePullPolicy: IfNotPresent
   # Coherence cluster name
@@ -139,7 +141,7 @@ carts:
   replicas: 1
   image:
     repository: ss-carts
-    tag: "2.11.0"
+    tag: ""  # Uses global.imageTag if not specified
   service:
     name: carts
     port: 80
@@ -151,7 +153,7 @@ catalog:
   replicas: 1
   image:
     repository: ss-catalog
-    tag: "2.11.0"
+    tag: ""  # Uses global.imageTag if not specified
   service:
     # Use "catalogue" for compatibility with the existing front-end
     name: catalogue
@@ -164,7 +166,7 @@ orders:
   replicas: 1
   image:
     repository: ss-orders
-    tag: "2.11.0"
+    tag: ""  # Uses global.imageTag if not specified
   service:
     name: orders
     port: 80
@@ -176,7 +178,7 @@ payment:
   replicas: 1
   image:
     repository: ss-payment
-    tag: "2.11.0"
+    tag: ""  # Uses global.imageTag if not specified
   service:
     name: payment
     port: 80
@@ -188,7 +190,7 @@ shipping:
   replicas: 1
   image:
     repository: ss-shipping
-    tag: "2.11.0"
+    tag: ""  # Uses global.imageTag if not specified
   service:
     name: shipping
     port: 80
@@ -200,7 +202,7 @@ users:
   replicas: 1
   image:
     repository: ss-users
-    tag: "2.11.0"
+    tag: ""  # Uses global.imageTag if not specified
   service:
     name: user
     port: 80

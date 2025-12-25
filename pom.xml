@@ -12,9 +12,17 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.oracle.coherence.examples.sockshop.helidon</groupId>
-    <artifactId>sockshop-coh</artifactId>
+    <artifactId>sockshop-coh-parent</artifactId>
     <packaging>pom</packaging>
     <version>2.11.0</version>
+
+    <name>Coherence Helidon Sock Shop Parent</name>
+    <description>Aggregator POM for Coherence Helidon Sock Shop microservices with centralized version management</description>
+
+    <properties>
+        <!-- Centralized version for all modules -->
+        <sockshop.version>2.11.0</sockshop.version>
+    </properties>
 
     <modules>
         <module>carts</module>

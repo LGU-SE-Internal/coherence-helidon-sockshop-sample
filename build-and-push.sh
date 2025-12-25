@@ -5,6 +5,10 @@ set -e
 REGISTRY="10.10.10.240"
 REPO="library"
 
+# Extract version from root pom.xml dynamically
+VERSION=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec 2>/dev/null || echo "2.11.0")
+
+echo "=== Building version: ${VERSION} ==="
 echo "=== Step 1: Building images locally with Jib ==="
 mvn clean package -Pcontainer -DskipTests \
   -Djib.goal=dockerBuild \
@@ -13,7 +17,7 @@ mvn clean package -Pcontainer -DskipTests \
 
 echo ""
 echo "=== Step 2: Pushing images to ${REGISTRY}/${REPO} ==="
-for img in $(docker images --format "{{.Repository}}:{{.Tag}}" | grep "${REGISTRY}/${REPO}/ss-"| grep 2.11.0); do
+for img in $(docker images --format "{{.Repository}}:{{.Tag}}" | grep "${REGISTRY}/${REPO}/ss-"| grep "${VERSION}"); do
   echo "Pushing $img..."
   docker push $img
 done
