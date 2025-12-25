@@ -12,12 +12,19 @@ The version management has been centralized to eliminate the need for manual fin
 
 **Root POM** (`pom.xml`):
 - Defines the `sockshop.version` property: `<sockshop.version>2.11.0</sockshop.version>`
-- This property is used by all child modules
+- Serves as an aggregator POM for multi-module builds
+- This property is used as a convention across all modules
 
 **Child Module POMs** (carts, catalog, orders, payment, shipping, users):
 - Use `<version>${sockshop.version}</version>` instead of hardcoded versions
-- Must also define the `sockshop.version` property locally (inherited from aggregator context)
-- Automatically inherit the version from the root POM's property
+- Each defines `sockshop.version` property locally (required since they inherit from Helidon, not root)
+- Automatically resolve to the correct version when the property is set
+- All use the same property name for consistency
+
+**Note**: Because child modules inherit from `io.helidon.applications:helidon-mp` (for dependency management) rather than from the root POM, each child must define the `sockshop.version` property. However, this still provides significant improvement over hardcoded versions:
+- Uses a consistent, findable property name across all POMs
+- Enables single find-and-replace operation: `<sockshop.version>2.11.0</sockshop.version>` → `<sockshop.version>2.12.0</sockshop.version>`
+- Property-based approach is more maintainable than scattered hardcoded values
 
 ### Build Script
 
@@ -41,24 +48,23 @@ The version management has been centralized to eliminate the need for manual fin
 
 To update the project version from `2.11.0` to a new version (e.g., `2.12.0`):
 
-### Step 1: Update Maven POMs
+### Step 1: Update Maven POMs (Single Find-Replace)
 
-Update the `sockshop.version` property in **all** POM files:
+Use your text editor's find-and-replace feature to update all POMs at once:
 
-1. Root POM (`pom.xml`):
-   ```xml
-   <sockshop.version>2.12.0</sockshop.version>
-   ```
+**Find:** `<sockshop.version>2.11.0</sockshop.version>`
+**Replace with:** `<sockshop.version>2.12.0</sockshop.version>`
 
-2. Each child module POM (carts, catalog, orders, payment, shipping, users):
-   ```xml
-   <properties>
-       <sockshop.version>2.12.0</sockshop.version>
-       ...
-   </properties>
-   ```
+This will update:
+1. Root POM (`pom.xml`)
+2. carts/pom.xml
+3. catalog/pom.xml  
+4. orders/pom.xml
+5. payment/pom.xml
+6. shipping/pom.xml
+7. users/pom.xml
 
-**Tip**: Use a text editor's find-and-replace feature to change all occurrences of `<sockshop.version>2.11.0</sockshop.version>` to `<sockshop.version>2.12.0</sockshop.version>` across all POM files.
+All in a single operation!
 
 ### Step 2: Update Helm Chart
 
@@ -92,11 +98,14 @@ You should see `2.12.0` in all outputs.
 
 ## Benefits
 
-1. **Single Source of Truth**: Version is defined in properties, reducing duplication
-2. **Easier Updates**: Change version in 8 places (root + 6 children + helm) instead of throughout codebase
-3. **Reduced Errors**: Less risk of version mismatch between modules
+1. **Consistent Property Name**: All modules use the same `sockshop.version` property
+2. **Easier Updates**: Single find-and-replace operation for property values across all POMs
+3. **Reduced Errors**: Property-based versioning is more maintainable than scattered hardcoded values
 4. **Dynamic Build Script**: Build script automatically uses current version
 5. **Flexible Helm**: Services can override global version if needed
+6. **Convention Over Configuration**: Established pattern for version management
+
+**Note**: While the property must be defined in each POM (due to Helidon parent inheritance), using a consistent property name provides significant benefits over hardcoded versions. Future enhancements could include using Maven's CI Friendly Versions with `${revision}` and flatten-maven-plugin for true single-source versioning.
 
 ## Current Version Locations
 
