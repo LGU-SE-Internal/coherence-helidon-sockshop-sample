@@ -24,7 +24,7 @@
     <properties>
         <mainClass>com.oracle.coherence.examples.sockshop.helidon.payment.Application</mainClass>
         <container.repo>ghcr.io/oracle/coherence-helidon-sockshop</container.repo>
-        <container.version>${project.version}</container.version>
+        <container.version>${docker.image.tag}</container.version>
         <jib.goal>dockerBuild</jib.goal>
         <coherence.group.id>com.oracle.coherence.ce</coherence.group.id>
 

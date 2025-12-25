@@ -7,7 +7,7 @@ global:
   # Docker image registry
   imageRegistry: "10.10.10.240/library"
   # Global image tag - applies to all backend services unless overridden
-  imageTag: "2.12.1"
+  imageTag: "2.12.2"
   # Image pull policy
   imagePullPolicy: IfNotPresent
   # Coherence cluster name
