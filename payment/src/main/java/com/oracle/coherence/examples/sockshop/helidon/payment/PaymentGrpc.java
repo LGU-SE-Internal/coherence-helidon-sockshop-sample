@@ -25,7 +25,6 @@ import org.eclipse.microprofile.metrics.annotation.Counted;
 @ApplicationScoped
 @Grpc.GrpcService("PaymentGrpc")
 @Grpc.GrpcMarshaller("jsonb")
-@Grpc.GrpcInterceptors(MetadataLogger.class)
 @Slf4j
 public class PaymentGrpc {
     /**
@@ -49,7 +48,7 @@ public class PaymentGrpc {
     @Counted
     public Authorization authorize(PaymentRequest paymentRequest) {
         String tp = paymentRequest.getTraceParent();
-        log.info(">>>> [RELAY RECEIVE] Received payment Trace: {}", tp);
+        // log.info(">>>> [RELAY RECEIVE] Received payment Trace: {}", tp);
 
         io.helidon.tracing.Tracer tracer = io.helidon.tracing.Tracer.global();
         io.helidon.tracing.Span.Builder<?> spanBuilder = tracer.spanBuilder("PaymentGrpc/authorize")

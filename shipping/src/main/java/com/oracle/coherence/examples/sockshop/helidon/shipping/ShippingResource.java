@@ -26,7 +26,6 @@ import org.eclipse.microprofile.metrics.annotation.Timed;
 @Path("/shipping")
 @Grpc.GrpcService("ShippingGrpc")
 @Grpc.GrpcMarshaller("jsonb")
-@Grpc.GrpcInterceptors(MetadataLogger.class)
 @Timed
 @Slf4j
 public class ShippingResource implements ShippingApi {
@@ -52,7 +51,7 @@ public class ShippingResource implements ShippingApi {
     @Grpc.Unary
     public Shipment ship(ShippingRequest req) {
         String tp = req.getTraceParent();
-        log.info(">>>> [RELAY RECEIVE] Received Trace: {}", tp);
+        // log.info(">>>> [RELAY RECEIVE] Received Trace: {}", tp);
 
         io.helidon.tracing.Tracer tracer = io.helidon.tracing.Tracer.global();
         io.helidon.tracing.Span.Builder<?> spanBuilder = tracer.spanBuilder("ShippingGrpc/ship")

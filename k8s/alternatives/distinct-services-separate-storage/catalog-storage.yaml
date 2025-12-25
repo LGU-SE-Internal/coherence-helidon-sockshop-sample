@@ -11,7 +11,7 @@ metadata:
 spec:
   role: CatalogStorage
   replicas: 1
-  image: 10.10.10.240/library/ss-catalog:2.10.2
+  image: 10.10.10.240/library/ss-catalog:2.11.0
   readinessProbe:
     initialDelaySeconds: 10
     periodSeconds: 10

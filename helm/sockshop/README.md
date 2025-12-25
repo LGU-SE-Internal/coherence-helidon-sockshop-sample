@@ -65,7 +65,7 @@ The following table lists the configurable parameters and their default values.
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `global.imageRegistry` | Docker image registry | `10.10.10.240/library` |
-| `global.imagePullPolicy` | Image pull policy | `IfNotPresent` |
+| `global.imagePullPolicy` | Image pull policy | `Always` |
 | `global.coherenceCluster` | Coherence cluster name | `SockShop` |
 
 ### Frontend Parameters
@@ -105,7 +105,7 @@ All backend services (carts, catalog, orders, payment, shipping, users) share co
 | `<service>.enabled` | Enable the service | `true` |
 | `<service>.replicas` | Number of replicas | `1` |
 | `<service>.image.repository` | Image repository | `ss-<service>` |
-| `<service>.image.tag` | Image tag | `2.10.2` |
+| `<service>.image.tag` | Image tag | `2.11.0` |
 
 ### Coherence Common Parameters
 

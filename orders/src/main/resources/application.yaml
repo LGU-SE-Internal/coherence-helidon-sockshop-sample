@@ -20,17 +20,13 @@ grpc:
         port: 80
         tls:
           enabled: "false"
-grpc-client:
-  grpc-services:
-    tracing:
-      enabled: true
 coherence:
   topic:
     enabled: false
   proxy:
     enabled: false
   tracing:
-    ratio: 1.0
+    ratio: -1
 otel:  
   service:
     name: Orders

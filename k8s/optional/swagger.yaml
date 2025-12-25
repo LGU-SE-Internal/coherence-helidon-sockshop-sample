@@ -37,6 +37,6 @@ spec:
       containers:
         - name: swagger
           image: swaggerapi/swagger-ui:latest
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080

@@ -5,9 +5,6 @@
 # https://oss.oracle.com/licenses/upl.
 #
 grpc:
-  grpc-services:
-    tracing:
-      enabled: true
   client:
     channels:
       - name: "default"
@@ -19,7 +16,7 @@ coherence:
   proxy:
     enabled: false
   tracing:
-    ratio: 1.0
+    ratio: -1
 otel:  
   service:
     name: Shipping

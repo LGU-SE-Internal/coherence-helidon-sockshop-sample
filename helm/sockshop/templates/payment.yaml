@@ -28,10 +28,6 @@ spec:
   env:
     - name: OTEL_JAVA_GLOBAL_AUTOCONFIGURE_ENABLED
       value: "true"
-    - name: OTEL_JAVAAGENT_DEBUG
-      value: "true"
-    - name: OTEL_INSTRUMENTATION_GRPC_ENABLED
-      value: "false"
   ports:
     - name: http
       port: 7001

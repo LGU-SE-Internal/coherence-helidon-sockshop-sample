@@ -7,7 +7,7 @@
 # values-production.yaml
 global:
   imageRegistry: "my-registry.example.com"
-  imagePullPolicy: Always
+  imagePullPolicy: IfNotPresent
 
 frontend:
   replicas: 2
@@ -122,25 +122,25 @@ global:
 # Deploy new version for specific services
 carts:
   image:
-    tag: "2.10.2-beta"
+    tag: "2.11.0-beta"
   replicas: 1
 
 # Keep old version for other services
 catalog:
   image:
-    tag: "2.10.2"
+    tag: "2.11.0"
 orders:
   image:
-    tag: "2.10.2"
+    tag: "2.11.0"
 payment:
   image:
-    tag: "2.10.2"
+    tag: "2.11.0"
 shipping:
   image:
-    tag: "2.10.2"
+    tag: "2.11.0"
 users:
   image:
-    tag: "2.10.2"
+    tag: "2.11.0"
 
 ---
 # Example 6: Custom resources for high-performance deployment
