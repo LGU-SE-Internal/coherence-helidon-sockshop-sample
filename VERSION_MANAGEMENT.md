@@ -8,28 +8,29 @@ The version management has been centralized to eliminate the need for manual fin
 
 ## Architecture
 
+## Architecture
+
 ### Maven POMs
 
 **Root POM** (`pom.xml`):
-- Defines the `sockshop.version` property: `<sockshop.version>2.11.0</sockshop.version>`
-- Serves as an aggregator POM for multi-module builds
-- This property is used as a convention across all modules
+- Defines the project version: `<version>2.11.0</version>`
+- Acts as parent POM for all child modules
+- Imports Helidon BOM for dependency management
+- All child modules inherit the version automatically
 
 **Child Module POMs** (carts, catalog, orders, payment, shipping, users):
-- Use `<version>${sockshop.version}</version>` instead of hardcoded versions
-- Each defines `sockshop.version` property locally (required since they inherit from Helidon, not root)
-- Automatically resolve to the correct version when the property is set
-- All use the same property name for consistency
+- Declare root POM as parent: `<parent>...</parent>`
+- Inherit version from parent automatically (no version tag needed)
+- No need to define version property locally
+- Simply update the root POM version to update all modules
 
-**Note**: Because child modules inherit from `io.helidon.applications:helidon-mp` (for dependency management) rather than from the root POM, each child must define the `sockshop.version` property. However, this still provides significant improvement over hardcoded versions:
-- Uses a consistent, findable property name across all POMs
-- Enables single find-and-replace operation: `<sockshop.version>2.11.0</sockshop.version>` → `<sockshop.version>2.12.0</sockshop.version>`
-- Property-based approach is more maintainable than scattered hardcoded values
+**Note**: Child modules now inherit from the root POM (not directly from Helidon). The root POM imports the Helidon BOM in its dependencyManagement section, providing all Helidon dependencies while enabling true version inheritance.
 
 ### Build Script
 
 **build-and-push.sh**:
-- Dynamically extracts version from root `pom.xml` using Maven
+- Dynamically extracts version from root `pom.xml` using Maven help:evaluate
+- Uses `grep -F` for fixed-string matching (no regex interpretation)
 - No longer hardcodes version numbers in grep commands
 - Automatically adapts to version changes
 
@@ -48,23 +49,16 @@ The version management has been centralized to eliminate the need for manual fin
 
 To update the project version from `2.11.0` to a new version (e.g., `2.12.0`):
 
-### Step 1: Update Maven POMs (Single Find-Replace)
+### Step 1: Update Root POM Only
 
-Use your text editor's find-and-replace feature to update all POMs at once:
+Update **ONLY** the root POM (`pom.xml`):
+```xml
+<version>2.12.0</version>
+```
 
-**Find:** `<sockshop.version>2.11.0</sockshop.version>`
-**Replace with:** `<sockshop.version>2.12.0</sockshop.version>`
+That's it! All child modules automatically inherit the new version.
 
-This will update:
-1. Root POM (`pom.xml`)
-2. carts/pom.xml
-3. catalog/pom.xml  
-4. orders/pom.xml
-5. payment/pom.xml
-6. shipping/pom.xml
-7. users/pom.xml
-
-All in a single operation!
+**Important**: Do NOT update child module POMs - they inherit the version automatically from the parent.
 
 ### Step 2: Update Helm Chart
 
@@ -98,40 +92,40 @@ You should see `2.12.0` in all outputs.
 
 ## Benefits
 
-1. **Consistent Property Name**: All modules use the same `sockshop.version` property
-2. **Easier Updates**: Single find-and-replace operation for property values across all POMs
-3. **Reduced Errors**: Property-based versioning is more maintainable than scattered hardcoded values
-4. **Dynamic Build Script**: Build script automatically uses current version
-5. **Flexible Helm**: Services can override global version if needed
-6. **Convention Over Configuration**: Established pattern for version management
-
-**Note**: While the property must be defined in each POM (due to Helidon parent inheritance), using a consistent property name provides significant benefits over hardcoded versions. Future enhancements could include using Maven's CI Friendly Versions with `${revision}` and flatten-maven-plugin for true single-source versioning.
+1. **True Single Source of Truth**: Version is defined only in the root POM
+2. **Minimal Updates**: Change version in just ONE place (root pom.xml only!)
+3. **Automatic Inheritance**: All child modules inherit version from parent
+4. **No Duplication**: No need to update child module POMs
+5. **Dynamic Build Script**: Build script automatically uses current version
+6. **Flexible Helm**: Services can override global version if needed
+7. **Proper Maven Structure**: Follows Maven best practices for parent-child relationships
 
 ## Current Version Locations
 
 The version `2.11.0` is currently defined in:
 
-1. ✅ `pom.xml` (root) - `<sockshop.version>2.11.0</sockshop.version>`
-2. ✅ `carts/pom.xml` - `<sockshop.version>2.11.0</sockshop.version>`
-3. ✅ `catalog/pom.xml` - `<sockshop.version>2.11.0</sockshop.version>`
-4. ✅ `orders/pom.xml` - `<sockshop.version>2.11.0</sockshop.version>`
-5. ✅ `payment/pom.xml` - `<sockshop.version>2.11.0</sockshop.version>`
-6. ✅ `shipping/pom.xml` - `<sockshop.version>2.11.0</sockshop.version>`
-7. ✅ `users/pom.xml` - `<sockshop.version>2.11.0</sockshop.version>`
-8. ✅ `helm/sockshop/values.yaml` - `imageTag: "2.11.0"`
-9. ✅ `helm/sockshop/Chart.yaml` - `appVersion: "2.11.0"` (optional)
+1. ✅ `pom.xml` (root) - `<version>2.11.0</version>` **← ONLY HERE!**
+2. ✅ `helm/sockshop/values.yaml` - `imageTag: "2.11.0"`
+3. ✅ `helm/sockshop/Chart.yaml` - `appVersion: "2.11.0"` (optional)
+
+Child modules automatically inherit from root POM - no version definitions needed!
 
 ## Migration from Old System
 
-**Before** (Manual find-and-replace required):
-- Version hardcoded as `<version>2.11.0</version>` in each child POM
+**Before** (Multiple locations to update):
+- Version hardcoded as `<version>2.11.0</version>` in each child POM (7 locations)
 - Version hardcoded in build-and-push.sh grep command
 - Version hardcoded for each service in Helm values
 
-**After** (Property-based):
-- Version referenced as `<version>${sockshop.version}</version>` in child POMs
+**After** (Single location):
+- Version defined only in root POM
+- Child modules inherit automatically
 - Build script extracts version dynamically
 - Helm uses global.imageTag with per-service override capability
+
+**Version Update Complexity:**
+- Before: Update 9+ files manually
+- After: Update 1 file (root POM) + 1 file (Helm values) = 2 files total!
 
 ## Future Improvements
 

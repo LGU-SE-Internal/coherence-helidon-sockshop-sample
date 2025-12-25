@@ -17,11 +17,21 @@
     <version>2.11.0</version>
 
     <name>Coherence Helidon Sock Shop Parent</name>
-    <description>Aggregator POM for Coherence Helidon Sock Shop microservices with centralized version management</description>
+    <description>Parent POM for Coherence Helidon Sock Shop microservices with centralized version management</description>
 
     <properties>
         <!-- Centralized version for all modules -->
         <sockshop.version>2.11.0</sockshop.version>
+        
+        <!-- Maven compiler settings -->
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <maven.compiler.release>21</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        
+        <!-- Helidon version -->
+        <version.lib.helidon>4.3.3</version.lib.helidon>
     </properties>
 
     <modules>
@@ -32,5 +42,18 @@
         <module>shipping</module>
         <module>users</module>
     </modules>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- Import Helidon BOM for dependency management -->
+            <dependency>
+                <groupId>io.helidon.applications</groupId>
+                <artifactId>helidon-mp</artifactId>
+                <version>${version.lib.helidon}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
 </project>
