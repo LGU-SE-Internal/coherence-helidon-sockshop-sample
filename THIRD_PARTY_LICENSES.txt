@@ -625,7 +625,7 @@ version(s), and exceptions or additional permissions here}."
                        Version 2, June 1991
 
  Copyright (C) 1989, 1991 Free Software Foundation, Inc.,
- 51 Franklin Street, Fifth Floor, Boston, MA 02.11.0301 USA
+ 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  Everyone is permitted to copy and distribute verbatim copies
  of this license document, but changing it is not allowed.
 
@@ -928,7 +928,7 @@ the "copyright" line and a pointer to where the full notice is found.
 
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
-    51 Franklin Street, Fifth Floor, Boston, MA 02.11.0301 USA.
+    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 Also add information on how to contact you by electronic and paper mail.
 
@@ -989,7 +989,7 @@ Fourth Party Dependencies
   EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
 --------------------------------------------
 "jakarta.ws.rs-api" (jakarta.ws.rs:jakarta.ws.rs-api)
-  Copyright (c) 2.11.0019 Oracle and/or its affiliates. All rights reserved.
+  Copyright (c) 2010,2019 Oracle and/or its affiliates. All rights reserved.
   Copyright (c) 2006 Google Inc.
   EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
 --------------------------------------------
@@ -1004,7 +1004,7 @@ Fourth Party Dependencies
  --------------------------------------------
 "javax.inject:1 as OSGi bundle" (org.glassfish.hk2.external:jakarta.inject)
   Copyright (C) 2009 The JSR-330 Expert Group
-  Copyright (c) 2.11.0018 Oracle and/or its affiliates. All rights reserved.
+  Copyright (c) 2010,2018 Oracle and/or its affiliates. All rights reserved.
   EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
 --------------------------------------------
 "JSON-P Default Provider" (org.glassfish:jakarta.json)

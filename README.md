@@ -298,7 +298,7 @@ locally, and (optionally) push new container images to the repository of your ch
 This project uses a centralized version management system to make version updates easier and less error-prone. All service versions are controlled from a single location using Maven properties and Helm global values.
 
 **Key Features:**
-- Single `sockshop.version` property in root POM
+- Single `docker.image.tag` property in root POM
 - All child modules reference this property
 - Build scripts dynamically extract version
 - Helm uses `global.imageTag` for all backend services
