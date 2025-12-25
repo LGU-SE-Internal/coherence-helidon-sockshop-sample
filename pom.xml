@@ -21,7 +21,7 @@
 
     <properties>
         <!-- Centralized version for all modules -->
-        <sockshop.version>2.11.0</sockshop.version>
+        <sockshop.version>2.12.1</sockshop.version>
         
         <!-- Maven compiler settings -->
         <maven.compiler.source>21</maven.compiler.source>
