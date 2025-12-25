@@ -46,6 +46,7 @@ as the application framework, in case one of those is your framework of choice.
   - [Complete Application Deployment](#complete-application-deployment)
   - [Load Testing](#load-testing)
   - [Development](#development)
+  - [Version Management](#version-management)
   - [Contributing](#contributing)
   - [Security](#security)
   - [License](#license)
@@ -291,6 +292,18 @@ If you want to modify the demo, you will need to check out the code for the proj
 locally, and (optionally) push new container images to the repository of your choice.
 
  [Go to Development section](./doc/development.md)
+
+## Version Management
+
+This project uses a centralized version management system to make version updates easier and less error-prone. All service versions are controlled from a single location using Maven properties and Helm global values.
+
+**Key Features:**
+- Single `sockshop.version` property in root POM
+- All child modules reference this property
+- Build scripts dynamically extract version
+- Helm uses `global.imageTag` for all backend services
+
+For details on how to update the project version, see [VERSION_MANAGEMENT.md](./VERSION_MANAGEMENT.md).
  
 ## Contributing
 

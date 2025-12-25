@@ -55,6 +55,9 @@ Create the image path for a service
 {{- $registry := .global.imageRegistry }}
 {{- $repository := .image.repository }}
 {{- $tag := .image.tag }}
+{{- if not $tag }}
+{{- $tag = .global.imageTag }}
+{{- end }}
 {{- printf "%s/%s:%s" $registry $repository $tag }}
 {{- end }}
 
