@@ -49,16 +49,30 @@ The version management has been centralized to eliminate the need for manual fin
 
 To update the project version from `2.11.0` to a new version (e.g., `2.12.0`):
 
-### Step 1: Update Root POM Only
+### Step 1: Update Root POM Version
 
-Update **ONLY** the root POM (`pom.xml`):
+Update the root POM (`pom.xml`) version:
 ```xml
 <version>2.12.0</version>
 ```
 
-That's it! All child modules automatically inherit the new version.
+### Step 2: Update Parent Reference in Child POMs
 
-**Important**: Do NOT update child module POMs - they inherit the version automatically from the parent.
+Update the parent version reference in each child POM (6 files):
+```xml
+<parent>
+    <groupId>com.oracle.coherence.examples.sockshop.helidon</groupId>
+    <artifactId>sockshop-coh-parent</artifactId>
+    <version>2.12.0</version>  <!-- Update this -->
+    <relativePath>../pom.xml</relativePath>
+</parent>
+```
+
+**Tip**: Use find-and-replace to update all parent references at once:
+- Find: `<artifactId>sockshop-coh-parent</artifactId>\n        <version>2.11.0</version>`
+- Replace with: `<artifactId>sockshop-coh-parent</artifactId>\n        <version>2.12.0</version>`
+
+This updates the parent reference in all child POMs simultaneously.
 
 ### Step 2: Update Helm Chart
 
@@ -92,10 +106,10 @@ You should see `2.12.0` in all outputs.
 
 ## Benefits
 
-1. **True Single Source of Truth**: Version is defined only in the root POM
-2. **Minimal Updates**: Change version in just ONE place (root pom.xml only!)
+1. **Centralized Version Management**: Version defined in root POM, inherited by all children
+2. **Simplified Updates**: Change version in 2 places (root POM + parent references) instead of 7+ separate module versions
 3. **Automatic Inheritance**: All child modules inherit version from parent
-4. **No Duplication**: No need to update child module POMs
+4. **Find-Replace Friendly**: Parent version references can be updated with single find-replace
 5. **Dynamic Build Script**: Build script automatically uses current version
 6. **Flexible Helm**: Services can override global version if needed
 7. **Proper Maven Structure**: Follows Maven best practices for parent-child relationships
@@ -104,11 +118,12 @@ You should see `2.12.0` in all outputs.
 
 The version `2.11.0` is currently defined in:
 
-1. ✅ `pom.xml` (root) - `<version>2.11.0</version>` **← ONLY HERE!**
-2. ✅ `helm/sockshop/values.yaml` - `imageTag: "2.11.0"`
-3. ✅ `helm/sockshop/Chart.yaml` - `appVersion: "2.11.0"` (optional)
+1. ✅ `pom.xml` (root) - `<version>2.11.0</version>` **← Main definition**
+2. ✅ Child POMs parent reference (6 files) - Can be updated with single find-replace
+3. ✅ `helm/sockshop/values.yaml` - `imageTag: "2.11.0"`
+4. ✅ `helm/sockshop/Chart.yaml` - `appVersion: "2.11.0"` (optional)
 
-Child modules automatically inherit from root POM - no version definitions needed!
+Child modules automatically inherit their version from parent - no module version tags!
 
 ## Migration from Old System
 
@@ -117,15 +132,16 @@ Child modules automatically inherit from root POM - no version definitions neede
 - Version hardcoded in build-and-push.sh grep command
 - Version hardcoded for each service in Helm values
 
-**After** (Single location):
-- Version defined only in root POM
-- Child modules inherit automatically
+**After** (Simplified with inheritance):
+- Version defined in root POM
+- Parent version reference in child POMs (can be updated with find-replace)
+- Child modules inherit their version automatically
 - Build script extracts version dynamically
 - Helm uses global.imageTag with per-service override capability
 
 **Version Update Complexity:**
-- Before: Update 9+ files manually
-- After: Update 1 file (root POM) + 1 file (Helm values) = 2 files total!
+- Before: Update 9+ files manually with multiple different patterns
+- After: Update 2 locations (root POM + parent refs via find-replace) + Helm = simplified!
 
 ## Future Improvements
 
