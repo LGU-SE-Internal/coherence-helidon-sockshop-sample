@@ -109,8 +109,8 @@ class SockShopUser(TaskSet):
             
             register_response = self.client.post("/register", json=user_data, name="/register")
             
-            # If registration succeeded, try login again
-            if register_response.status_code == 200:
+            # If registration succeeded (200) or user already exists (409), try login again
+            if register_response.status_code in [200, 409]:
                 response = self.client.get(
                     "/login",
                     headers={"Authorization": f"Basic {credentials}"},
@@ -203,8 +203,8 @@ class SockShopUser(TaskSet):
             }
             register_response = self.client.post("/register", json=user_data, name="/register")
             
-            # If registration failed (not 200), skip order
-            if register_response.status_code != 200:
+            # If registration failed (not 200 or 409 conflict), skip order
+            if register_response.status_code not in [200, 409]:
                 return
             
             # Try login again after successful registration
