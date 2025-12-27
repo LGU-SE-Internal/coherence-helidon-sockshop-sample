@@ -48,7 +48,7 @@ public class CartResource implements CartApi {
         log.info("Merging carts for customer: " + customerId + ", session: " + sessionId);
         boolean fMerged = carts.mergeCarts(customerId, sessionId);
         if (!fMerged) {
-            log.warn("Failed to merge carts for customer: " + customerId);
+            log.debug("No session cart to merge for customer: " + customerId + " (session: " + sessionId + ")");
         }
         return fMerged
                 ? Response.accepted().build()
