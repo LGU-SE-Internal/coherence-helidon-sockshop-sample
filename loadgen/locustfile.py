@@ -12,6 +12,10 @@ import os
 from locust import HttpUser, TaskSet, task, between
 from locust.exception import StopUser
 
+# Constants for unique user ID generation
+USER_ID_RANGE_PER_WORKER = 10000  # Number of unique users per worker
+MAX_USER_ID = 1000000  # Maximum user ID to wrap around
+
 
 class SockShopUser(TaskSet):
     """
@@ -25,12 +29,26 @@ class SockShopUser(TaskSet):
         self.catalogue = []
         self.logged_in = False
         self.username = None
-        self.user_pool_size = 100  # Smaller user pool for better reuse
+        
+        # Assign a unique user ID to this virtual user to avoid conflicts across workers
+        # Uses a combination of worker_id and user instance hash to ensure uniqueness
+        worker_id = self._get_worker_id()
+        user_instance_id = id(self.user) % USER_ID_RANGE_PER_WORKER
+        self.assigned_user_num = (worker_id * USER_ID_RANGE_PER_WORKER + user_instance_id) % MAX_USER_ID
         
         # Load catalogue on start
         response = self.client.get("/catalogue")
         if response.status_code == 200:
             self.catalogue = response.json()
+    
+    def _get_worker_id(self):
+        """Get the worker index for distributed load testing, defaults to 0 for standalone mode"""
+        try:
+            if hasattr(self.user, 'environment') and self.user.environment and self.user.environment.runner:
+                return getattr(self.user.environment.runner, 'worker_index', 0)
+        except (AttributeError, TypeError):
+            pass
+        return 0
         
     @task(40)
     def browse_catalogue(self):
@@ -79,10 +97,10 @@ class SockShopUser(TaskSet):
         """
         User registration and login flow (10% of requests)
         Moderate frequency - new users or returning users logging in
-        Uses smaller user pool to increase reuse and reduce registration conflicts
+        Each virtual user is assigned a unique user ID to prevent conflicts across workers
         """
-        # Use smaller user pool to encourage reuse (reduces 409 conflicts)
-        user_num = random.randint(1, self.user_pool_size)
+        # Use the assigned user number for this virtual user (unique across workers)
+        user_num = self.assigned_user_num
         username = f"user{user_num}"
         password = "password"
         
@@ -109,8 +127,8 @@ class SockShopUser(TaskSet):
             
             register_response = self.client.post("/register", json=user_data, name="/register")
             
-            # If registration succeeded, try login again
-            if register_response.status_code == 200:
+            # If registration succeeded (200) or user already exists (409), try login again
+            if register_response.status_code in [200, 409]:
                 response = self.client.get(
                     "/login",
                     headers={"Authorization": f"Basic {credentials}"},
@@ -162,7 +180,7 @@ class SockShopUser(TaskSet):
         """
         Complete purchase flow (5% of requests)
         Simulates the full user journey from browsing to order placement
-        Matches the original sockshop load test pattern exactly
+        Uses the assigned unique user ID to prevent conflicts across workers
         """
         if not self.catalogue:
             return
@@ -179,8 +197,8 @@ class SockShopUser(TaskSet):
         self.client.get("/", name="/")
         
         # 2. Login/Register to have a user account (required for orders)
-        # Use smaller user pool to increase reuse and reduce conflicts
-        user_num = random.randint(1, self.user_pool_size)
+        # Use the assigned user number for this virtual user (unique across workers)
+        user_num = self.assigned_user_num
         username = f"user{user_num}"
         password = "password"
         credentials = base64.b64encode(f"{username}:{password}".encode()).decode()
@@ -203,8 +221,8 @@ class SockShopUser(TaskSet):
             }
             register_response = self.client.post("/register", json=user_data, name="/register")
             
-            # If registration failed (not 200), skip order
-            if register_response.status_code != 200:
+            # If registration failed (not 200 or 409 conflict), skip order
+            if register_response.status_code not in [200, 409]:
                 return
             
             # Try login again after successful registration
