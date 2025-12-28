@@ -22,7 +22,7 @@
     <properties>
         <!-- Centralized version for all modules -->
         <sockshop.version>2.11.0</sockshop.version>
-        <docker.image.tag>2.12.2</docker.image.tag>
+        <docker.image.tag>2.12.3</docker.image.tag>
         
         <!-- Maven compiler settings -->
         <maven.compiler.source>21</maven.compiler.source>
