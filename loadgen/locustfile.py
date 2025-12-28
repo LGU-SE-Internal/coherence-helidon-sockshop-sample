@@ -12,6 +12,10 @@ import os
 from locust import HttpUser, TaskSet, task, between
 from locust.exception import StopUser
 
+# Constants for unique user ID generation
+USER_ID_RANGE_PER_WORKER = 10000  # Number of unique users per worker
+MAX_USER_ID = 1000000  # Maximum user ID to wrap around
+
 
 class SockShopUser(TaskSet):
     """
@@ -28,14 +32,23 @@ class SockShopUser(TaskSet):
         
         # Assign a unique user ID to this virtual user to avoid conflicts across workers
         # Uses a combination of worker_id and user instance hash to ensure uniqueness
-        worker_id = getattr(self.user.environment.runner, 'worker_index', 0) if hasattr(self.user, 'environment') and self.user.environment.runner else 0
-        user_instance_id = id(self.user) % 10000  # Use object ID for uniqueness within worker
-        self.assigned_user_num = (worker_id * 10000 + user_instance_id) % 1000000  # Unique user number
+        worker_id = self._get_worker_id()
+        user_instance_id = id(self.user) % USER_ID_RANGE_PER_WORKER
+        self.assigned_user_num = (worker_id * USER_ID_RANGE_PER_WORKER + user_instance_id) % MAX_USER_ID
         
         # Load catalogue on start
         response = self.client.get("/catalogue")
         if response.status_code == 200:
             self.catalogue = response.json()
+    
+    def _get_worker_id(self):
+        """Get the worker index for distributed load testing, defaults to 0 for standalone mode"""
+        try:
+            if hasattr(self.user, 'environment') and self.user.environment and self.user.environment.runner:
+                return getattr(self.user.environment.runner, 'worker_index', 0)
+        except (AttributeError, TypeError):
+            pass
+        return 0
         
     @task(40)
     def browse_catalogue(self):
