@@ -6,6 +6,8 @@ metadata:
   labels:
     {{- include "sockshop.service.labels" (dict "name" .Values.catalog.name) | nindent 4 }}
 spec:
+  labels:
+    {{- include "sockshop.service.labels" (dict "name" .Values.catalog.name) | nindent 4 }}
   cluster: {{ .Values.global.coherenceCluster }}
   role: Catalog
   replicas: {{ .Values.catalog.replicas }}
