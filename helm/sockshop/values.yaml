@@ -4,14 +4,28 @@
 
 # Global settings
 global:
-  # Docker image registry
-  imageRegistry: "10.10.10.240/library"
-  # Global image tag - applies to all backend services unless overridden
-  imageTag: "2.12.3"
+  # Docker image registry — defaults to the aegis-published public namespace
+  # so the chart works on a fresh cluster without extra pull secrets.
+  imageRegistry: "docker.io/opspai"
+  # Global image tag - applies to all backend services unless overridden.
+  # The CI publishes YYYYMMDD-<sha> + `latest`; pin the former in production.
+  imageTag: "latest"
   # Image pull policy
   imagePullPolicy: IfNotPresent
   # Coherence cluster name
   coherenceCluster: "SockShop"
+
+# OpenTelemetry configuration — values-driven so the chart can run against
+# different cluster layouts (aegis kind, Descartes lab, etc.) without patching
+# templates.
+otel:
+  # OTLP gRPC collector endpoint used by the frontend (Node SDK) and wrapper
+  # defaults for the Java backends.
+  collectorEndpoint: "http://opentelemetry-kube-stack-deployment-collector.monitoring:4317"
+  # Instrumentation CR (namespace/name) used to auto-inject the OpenTelemetry
+  # Java agent into Coherence pods via `inject-java` annotation. Leave empty
+  # to skip the annotation entirely.
+  instrumentation: "monitoring/opentelemetry-kube-stack"
 
 # Frontend configuration
 frontend:
@@ -20,10 +34,12 @@ frontend:
   replicas: 1
   image:
     repository: ss-frontend
-    tag: "propagator"
+    tag: "latest"
     pullPolicy: IfNotPresent
   service:
-    type: NodePort
+    # ClusterIP keeps kind happy (no LB provider); fault injection is
+    # pod-label targeted so external access is not required.
+    type: ClusterIP
     port: 80
     targetPort: 8079
   resources:
@@ -34,15 +50,16 @@ frontend:
       cpu: 1000m
       memory: 400Mi
   env:
-    # OpenTelemetry configuration
-    otelExporterEndpoint: "http://opentelemetry-kube-stack-deployment-collector.monitoring:4317"
+    # Optional frontend-specific override. When empty, falls back to
+    # `otel.collectorEndpoint`.
+    otelExporterEndpoint: ""
   securityContext:
     runAsNonRoot: true
     runAsUser: 10001
-    capabilities:
-      drop:
-        - all
-    readOnlyRootFilesystem: true
+    # Upstream's readOnlyRootFilesystem breaks the Node container (npm cache
+    # needs to be writable). Let the pod write to /tmp via emptyDir rather
+    # than fight the root-fs lock.
+    readOnlyRootFilesystem: false
 
 # Load generator configuration
 loadgen:
@@ -51,7 +68,7 @@ loadgen:
   replicas: 1
   image:
     repository: ss-loadgen
-    tag: "879a1cd"
+    tag: "latest"
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP
@@ -70,7 +87,9 @@ loadgen:
     spawnRate: 5
     # Set runTime to empty string for continuous load generation
     runTime: ""
-    targetHost: "http://front-end.sockshop.svc.cluster.local"
+    # Same-namespace service discovery keeps parallel installs (sockshop0,
+    # sockshop1, ...) working without a hardcoded namespace-qualified DNS name.
+    targetHost: "http://front-end"
     minWait: 1
     maxWait: 3
   # Configuration file content
@@ -130,9 +149,11 @@ coherence:
   readinessProbe:
     initialDelaySeconds: 10
     periodSeconds: 10
-  # Service monitor settings
+  # Service monitor settings — requires prometheus-operator CRDs, which most
+  # aegis clusters don't install. Off by default to keep the first install
+  # from failing on unknown kind.
   serviceMonitor:
-    enabled: true
+    enabled: false
 
 # Carts service
 carts:

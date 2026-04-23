@@ -76,5 +76,7 @@ app: {{ .name }}
 {{- end }}
 
 {{- define "sockshop.otel.podAnnotations" -}}
-instrumentation.opentelemetry.io/inject-java: "monitoring/opentelemetry-kube-stack"
+{{- if .Values.otel.instrumentation }}
+instrumentation.opentelemetry.io/inject-java: {{ .Values.otel.instrumentation | quote }}
+{{- end }}
 {{- end }}

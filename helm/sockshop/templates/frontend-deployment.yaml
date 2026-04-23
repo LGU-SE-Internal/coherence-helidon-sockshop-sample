@@ -37,7 +37,7 @@ spec:
         imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
         env:
         - name: OTEL_EXPORTER_OTLP_ENDPOINT
-          value: {{ .Values.frontend.env.otelExporterEndpoint | quote }}
+          value: {{ default .Values.otel.collectorEndpoint .Values.frontend.env.otelExporterEndpoint | quote }}
         resources:
           {{- toYaml .Values.frontend.resources | nindent 10 }}
         ports:
