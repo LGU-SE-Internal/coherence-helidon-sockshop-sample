@@ -80,3 +80,19 @@ app: {{ .name }}
 instrumentation.opentelemetry.io/inject-java: {{ .Values.otel.instrumentation | quote }}
 {{- end }}
 {{- end }}
+
+{{/*
+Common OTel env block for Coherence/Helidon services.
+
+Sets OTEL_EXPORTER_OTLP_ENDPOINT to override the auto-injected Java agent's
+default endpoint (which comes from the Instrumentation CR in
+.Values.otel.instrumentation) so each release talks to its own per-namespace
+sidecar. .Values.otel.collectorEndpoint may contain `{{ .Release.Namespace }}`,
+so we run it through `tpl` here.
+*/}}
+{{- define "sockshop.otel.env" -}}
+- name: OTEL_JAVA_GLOBAL_AUTOCONFIGURE_ENABLED
+  value: "true"
+- name: OTEL_EXPORTER_OTLP_ENDPOINT
+  value: {{ tpl .Values.otel.collectorEndpoint . | quote }}
+{{- end }}

@@ -28,8 +28,7 @@ spec:
     metrics:
       enabled: {{ .Values.coherence.metrics.enabled }}
   env:
-    - name: OTEL_JAVA_GLOBAL_AUTOCONFIGURE_ENABLED
-      value: "true"
+    {{- include "sockshop.otel.env" . | nindent 4 }}
   ports:
     - name: http
       port: 7001
