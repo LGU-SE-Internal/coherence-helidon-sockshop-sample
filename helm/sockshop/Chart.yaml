@@ -2,7 +2,7 @@ apiVersion: v2
 name: sockshop
 description: A Helm chart for Coherence Helidon Sock Shop application
 type: application
-version: 1.2.0
+version: 1.2.1
 appVersion: "2.12.3"
 keywords:
   - sockshop
