@@ -19,13 +19,65 @@ global:
 # different cluster layouts (aegis kind, Descartes lab, etc.) without patching
 # templates.
 otel:
-  # OTLP gRPC collector endpoint used by the frontend (Node SDK) and wrapper
-  # defaults for the Java backends.
-  collectorEndpoint: "http://opentelemetry-kube-stack-deployment-collector.monitoring:4317"
+  # OTLP gRPC collector endpoint used by the frontend (Node SDK) and the Java
+  # backends (overrides the Instrumentation-CR default). Default targets the
+  # per-namespace sidecar collector deployed by this chart (see
+  # .Values.otelCollector). Override with --set otel.collectorEndpoint=<url>
+  # to route at a shared cluster-wide collector — typical when
+  # otelCollector.enabled=false.
+  collectorEndpoint: "http://otel-collector.{{ .Release.Namespace }}.svc.cluster.local:4317"
   # Instrumentation CR (namespace/name) used to auto-inject the OpenTelemetry
   # Java agent into Coherence pods via `inject-java` annotation. Leave empty
   # to skip the annotation entirely.
   instrumentation: "monitoring/opentelemetry-kube-stack"
+
+# Per-namespace OTLP collector sidecar.
+#
+# Deploys a single-replica otel-collector-contrib in the release namespace so
+# each sockshop install gets its own queue and exporter to ClickHouse, instead
+# of all namespaces fanning into one shared cluster-wide collector (which
+# saturates its ClickHouse exporter sending_queue and silently drops spans).
+# See aegis #366 / #367.
+#
+# Disable to fall back to a shared collector — also override
+# .otel.collectorEndpoint to point at that collector's URL.
+otelCollector:
+  enabled: true
+  name: otel-collector
+  replicas: 1
+  image:
+    # Pre-mirrored to docker.io/opspai so fresh aegis clusters don't need
+    # extra pull secrets. Override with --set otelCollector.image.repository=...
+    repository: docker.io/opspai/opentelemetry-collector-contrib
+    tag: "0.142.0"
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 250m
+      memory: 1Gi
+    limits:
+      cpu: 2
+      memory: 4Gi
+  clickhouse:
+    endpoint: "tcp://clickstack-clickhouse-clickhouse-headless.monitoring.svc.cluster.local:9000?dial_timeout=10s&compress=lz4&username=default"
+    database: otel
+    tracesTableName: otel_traces
+    metricsTableName: otel_metrics
+    logsTableName: otel_logs
+    ttl: 72h
+    timeout: 30s
+  sendingQueue:
+    enabled: true
+    numConsumers: 10
+    queueSize: 5000
+    blocking: true
+  batch:
+    sendBatchSize: 2000
+    sendBatchMaxSize: 4000
+    timeout: 5s
+  memoryLimiter:
+    limitPercentage: 75
+    spikeLimitPercentage: 15
 
 # Frontend configuration
 frontend:

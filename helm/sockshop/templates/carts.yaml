@@ -27,6 +27,8 @@ spec:
   coherence:
     metrics:
       enabled: {{ .Values.coherence.metrics.enabled }}
+  env:
+    {{- include "sockshop.otel.env" . | nindent 4 }}
   ports:
     - name: http
       port: 7001
