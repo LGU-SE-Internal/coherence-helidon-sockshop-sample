@@ -193,31 +193,10 @@
             <artifactId>jul-to-slf4j</artifactId>
             <version>2.0.17</version>
         </dependency>
-        <!-- OpenTelemetry log appender for Logback -->
-        <dependency>
-            <groupId>io.opentelemetry.instrumentation</groupId>
-            <artifactId>opentelemetry-logback-appender-1.0</artifactId>
-            <version>2.11.0-alpha</version>
-        </dependency>
-        <!-- OpenTelemetry MDC support for Logback - automatically populates trace_id and span_id in MDC for console logging -->
-        <dependency>
-            <groupId>io.opentelemetry.instrumentation</groupId>
-            <artifactId>opentelemetry-logback-mdc-1.0</artifactId>
-            <version>2.11.0-alpha</version>
-        </dependency>
-        <!-- OpenTelemetry SDK for logs -->
-        <dependency>
-            <groupId>io.opentelemetry</groupId>
-            <artifactId>opentelemetry-sdk</artifactId>
-        </dependency>
         <dependency>
             <groupId>io.opentelemetry.semconv</groupId>
             <artifactId>opentelemetry-semconv</artifactId>
             <version>1.28.0-alpha</version>
-        </dependency>
-        <dependency>
-            <groupId>io.opentelemetry</groupId>
-            <artifactId>opentelemetry-sdk-logs</artifactId>
         </dependency>
 
         <!-- test dependencies -->

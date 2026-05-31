@@ -11,15 +11,8 @@
         </encoder>
     </appender>
     
-    <!-- OpenTelemetry appender for sending logs to OTLP collector -->
-    <appender name="OpenTelemetry"
-              class="io.opentelemetry.instrumentation.logback.appender.v1_0.OpenTelemetryAppender">
-        <captureExperimentalAttributes>true</captureExperimentalAttributes>
-        <captureKeyValuePairAttributes>true</captureKeyValuePairAttributes>
-    </appender>
     
     <root level="CONFIG">
         <appender-ref ref="console"/>
-        <appender-ref ref="OpenTelemetry"/>
     </root>
 </configuration>
