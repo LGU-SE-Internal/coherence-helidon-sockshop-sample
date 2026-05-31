@@ -100,6 +100,7 @@ public class PaymentGrpc {
                     paymentRequest.getAmount());
 
             payments.saveAuthorization(auth);
+            log.info("Payment authorized: orderId=" + paymentRequest.getOrderId() + " authorized=" + auth.isAuthorised());
 
             serverSpan.status(io.helidon.tracing.Span.Status.OK);
             return auth;
