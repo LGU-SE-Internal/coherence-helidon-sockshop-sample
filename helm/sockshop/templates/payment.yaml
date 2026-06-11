@@ -12,6 +12,8 @@ spec:
   role: Payment
   replicas: {{ .Values.payment.replicas }}
   image: {{ include "sockshop.image" (dict "global" .Values.global "image" .Values.payment.image) }}
+  resources:
+    {{- include "sockshop.resources" (dict "svc" .Values.payment "root" .) | nindent 4 }}
   readinessProbe:
     initialDelaySeconds: {{ .Values.coherence.readinessProbe.initialDelaySeconds }}
     periodSeconds: {{ .Values.coherence.readinessProbe.periodSeconds }}

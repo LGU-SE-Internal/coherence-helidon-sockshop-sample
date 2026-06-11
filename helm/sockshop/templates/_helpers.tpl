@@ -75,6 +75,17 @@ Selector labels for services
 app: {{ .name }}
 {{- end }}
 
+{{/*
+Resolve the container resources for a Coherence backend: the per-service
+override (.svc.resources) if set, otherwise the shared coherence.resources
+default. Usage: include "sockshop.resources" (dict "svc" .Values.carts "root" .)
+*/}}
+{{- define "sockshop.resources" -}}
+{{- $svc := .svc -}}
+{{- $resources := $svc.resources | default .root.Values.coherence.resources -}}
+{{- toYaml $resources -}}
+{{- end }}
+
 {{- define "sockshop.otel.podAnnotations" -}}
 {{- if .Values.otel.instrumentation }}
 instrumentation.opentelemetry.io/inject-java: {{ .Values.otel.instrumentation | quote }}

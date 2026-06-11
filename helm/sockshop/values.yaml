@@ -93,13 +93,16 @@ frontend:
     type: ClusterIP
     port: 80
     targetPort: 8079
+  # front-end is a light Node/JS UI (~78Mi baseline). Keep a finite CPU limit so
+  # cpu_stress has something to throttle against, but stay generous so normal
+  # browse traffic never throttles.
   resources:
     requests:
-      cpu: 100m
-      memory: 400Mi
+      cpu: 50m
+      memory: 128Mi
     limits:
-      cpu: 1000m
-      memory: 400Mi
+      cpu: 500m
+      memory: 1Gi
   env:
     # Optional frontend-specific override. When empty, falls back to
     # `otel.collectorEndpoint`.
@@ -193,6 +196,23 @@ coherence:
       - "-Dhelidon.serialFilter.ignoreFiles=true"
       - "-Dhelidon.serialFilter.pattern=*"
       - "-Dhelidon.serialFilter.failure.action=WARN"
+  # Default container resources for every Coherence/Helidon backend.
+  #
+  # Sized GENEROUSLY on purpose (aegis #563): a finite CPU limit gives
+  # cpu_stress something to throttle against (Coherence idles 8-30m, so a 500m
+  # cap is trivially saturated by a 4-worker stress while never throttling
+  # normal ~10 QPS browse traffic). The mem limit must comfortably contain the
+  # FIXED 2g JVM heap pinned above (jvm.memory.heapSize=2g → -Xms2g -Xmx2g) plus
+  # Coherence off-heap / metaspace / thread stacks / direct buffers (~500Mi),
+  # so 3Gi leaves headroom and never OOMs on normal traffic. Per-service
+  # overrides go under <svc>.resources.
+  resources:
+    requests:
+      cpu: 50m
+      memory: 1536Mi
+    limits:
+      cpu: 500m
+      memory: 3Gi
   # Coherence settings
   metrics:
     enabled: true
