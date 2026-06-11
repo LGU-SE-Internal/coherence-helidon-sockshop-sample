@@ -12,6 +12,8 @@ spec:
   role: Orders
   replicas: {{ .Values.orders.replicas }}
   image: {{ include "sockshop.image" (dict "global" .Values.global "image" .Values.orders.image) }}
+  resources:
+    {{- include "sockshop.resources" (dict "svc" .Values.orders "root" .) | nindent 4 }}
   readinessProbe:
     initialDelaySeconds: {{ .Values.coherence.readinessProbe.initialDelaySeconds }}
     periodSeconds: {{ .Values.coherence.readinessProbe.periodSeconds }}
