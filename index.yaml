@@ -1,0 +1,29 @@
+apiVersion: v1
+entries:
+  sockshop:
+  - apiVersion: v2
+    appVersion: 2.12.3
+    created: "2026-06-13T08:40:55.013006501Z"
+    dependencies:
+    - name: aegis-points
+      repository: ""
+      version: 0.1.0
+    description: A Helm chart for Coherence Helidon Sock Shop application
+    digest: 695653bddb350f18e3e734b018131ce6c336d76a006960dce43265829e1546de
+    home: https://github.com/oracle/coherence-helidon-sockshop-sample
+    keywords:
+    - sockshop
+    - microservices
+    - coherence
+    - helidon
+    - e-commerce
+    maintainers:
+    - name: Oracle Coherence Team
+    name: sockshop
+    sources:
+    - https://github.com/oracle/coherence-helidon-sockshop-sample
+    type: application
+    urls:
+    - https://lgu-se-internal.github.io/coherence-helidon-sockshop-sample/sockshop-1.3.2.tgz
+    version: 1.3.2
+generated: "2026-06-13T08:40:55.01004151Z"
